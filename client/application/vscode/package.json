@@ -267,7 +267,13 @@
           "id": "bigUML.panel.hello-world",
           "name": "Hello World",
           "type": "webview",
-          "when": "bigUML.isRunning && false"
+          "when": "bigUML.isRunning"
+        },
+        {
+          "id": "bigUML.panel.code-to-class-diagram",
+          "name": "Code to Class diagram",
+          "type": "webview",
+          "when": "bigUML.isRunning"
         }
       ]
     },
@@ -288,6 +294,7 @@
     "onView:bigUML.outlineView"
   ],
   "dependencies": {
+    "@borkdominik-biguml/big-code-to-class-diagram": "*",
     "@borkdominik-biguml/big-hello-world": "*",
     "@borkdominik-biguml/big-minimap": "*",
     "@borkdominik-biguml/big-outline": "*",
