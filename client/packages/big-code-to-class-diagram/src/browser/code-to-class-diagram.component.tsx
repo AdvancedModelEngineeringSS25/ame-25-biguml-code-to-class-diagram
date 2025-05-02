@@ -6,36 +6,20 @@
  *
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
-import { VSCodeContext } from '@borkdominik-biguml/big-components';
-import { useCallback, useContext, useEffect, useState, type ReactElement } from 'react';
-import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction } from '../common/index.js';
+import { type ReactElement } from 'react';
 
 
 export function CodeToClassDiagram(): ReactElement {
-    const { listenAction, dispatchAction } = useContext(VSCodeContext);
-    const [count, setCount] = useState(0);
 
-    useEffect(() => {
-        listenAction(action => {
-            if (CodeToClassDiagramActionResponse.is(action)) {
-                setCount(action.count);
-            }
-        });
-    }, [listenAction]);
+    const openFile = () => {
+        console.log("Import File was Pressed!")
+    };
 
-    const increase1 = useCallback(() => {
-        dispatchAction(RequestCodeToClassDiagramAction.create({ increase: 1 }));
-    }, [dispatchAction]);
-
-    const increase5 = useCallback(() => {
-        dispatchAction(RequestCodeToClassDiagramAction.create({ increase: 5 }));
-    }, [dispatchAction]);
 
     return (
         <div>
-            <span>Hello World! {count}</span>
-            <button onClick={() => increase1()}>Increase 1</button>
-            <button onClick={() => increase5()}>Increase 5</button>
+            <span>CODE TO CLASS DIAGRAM!</span>
+            <button onClick={() => openFile()}>Import File</button>
         </div>
     );
 }
