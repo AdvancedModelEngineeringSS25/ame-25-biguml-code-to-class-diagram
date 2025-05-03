@@ -17,7 +17,8 @@ import {
 } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { DisposableCollection } from '@eclipse-glsp/protocol';
 import { inject, injectable, postConstruct } from 'inversify';
-import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction } from '../common/code-to-class-diagram.action.js';
+import * as vscode from 'vscode';
+import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -43,6 +44,25 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 });
             })
         );
+
+        this.toDispose.push(
+            this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(
+                RequestSelectFolderAction.KIND,
+                async () => {
+                    const folders = await vscode.window.showOpenDialog({
+                        canSelectFolders: true,
+                        canSelectMany: false,
+                        openLabel: 'Select Folder'
+                    });
+        
+                    const folderPath = folders?.[0]?.fsPath ?? null;
+                    console.log('Selected folder:', folderPath);
+
+                    return SelectedFolderResponseAction.create({ folderPath });
+                }
+            )
+        );
+
     }
 
     dispose(): void {

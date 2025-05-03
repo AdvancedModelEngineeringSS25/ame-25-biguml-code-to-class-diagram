@@ -54,3 +54,84 @@ export namespace CodeToClassDiagramActionResponse {
         };
     }
 }
+
+export interface RequestSelectFolderAction extends RequestAction<SelectedFolderResponseAction> {
+    kind: typeof RequestSelectFolderAction.KIND;
+}
+
+export namespace RequestSelectFolderAction {
+    export const KIND = 'requestSelectFolder';
+
+    export function is(object: unknown): object is RequestSelectFolderAction {
+        return RequestAction.hasKind(object, KIND);
+    }
+
+    export function create(): RequestSelectFolderAction {
+        return {
+            kind: KIND,
+            requestId: ''
+        };
+    }
+}
+
+export interface SelectedFolderResponseAction extends ResponseAction {
+    kind: typeof SelectedFolderResponseAction.KIND;
+    folderPath: string | null;
+}
+
+export namespace SelectedFolderResponseAction {
+    export const KIND = 'selectedFolderResponse';
+
+    export function is(object: unknown): object is SelectedFolderResponseAction {
+        return Action.hasKind(object, KIND);
+    }
+
+    export function create(
+        options?: Omit<SelectedFolderResponseAction, 'kind' | 'responseId'> & { responseId?: string }
+    ): SelectedFolderResponseAction {
+        return {
+            kind: KIND,
+            responseId: '',
+            folderPath: null,
+            ...options
+        };
+    }
+}
+
+// export interface InitClientHandshakeAction extends RequestAction<InitClientHandshakeResponse> {
+//     kind: typeof InitClientHandshakeAction.KIND;
+// }
+
+// export namespace InitClientHandshakeAction {
+//     export const KIND = 'initClientHandshake';
+
+//     export function is(object: unknown): object is InitClientHandshakeAction {
+//         return RequestAction.hasKind(object, KIND);
+//     }
+
+//     export function create(): InitClientHandshakeAction {
+//         return {
+//             kind: KIND,
+//             requestId: ''
+//         };
+//     }
+// }
+
+// export interface InitClientHandshakeResponse extends ResponseAction {
+//     kind: typeof InitClientHandshakeResponse.KIND;
+// }
+
+// export namespace InitClientHandshakeResponse {
+//     export const KIND = 'initClientHandshakeResponse';
+
+//     export function is(object: unknown): object is InitClientHandshakeResponse {
+//         return Action.hasKind(object, KIND);
+//     }
+
+//     export function create(): InitClientHandshakeResponse {
+//         return {
+//             kind: KIND,
+//             responseId: ''
+//         };
+//     }
+// }

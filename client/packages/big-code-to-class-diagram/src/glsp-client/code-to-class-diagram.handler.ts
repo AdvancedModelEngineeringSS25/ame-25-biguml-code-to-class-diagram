@@ -7,21 +7,21 @@
  * SPDX-License-Identifier: MIT
  *********************************************************************************/
 
-import type { Action, IActionHandler, ICommand } from '@eclipse-glsp/client';
-import { injectable } from 'inversify';
-import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction } from '../common/code-to-class-diagram.action.js';
+// import type { Action, IActionHandler, ICommand } from '@eclipse-glsp/client';
+// import { injectable } from 'inversify';
+// import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction } from '../common/code-to-class-diagram.action.js';
 
-@injectable()
-export class CodeToClassDiagramHandler implements IActionHandler {
-    private count = 0;
+// @injectable()
+// export class CodeToClassDiagramHandler implements IActionHandler {
+//     private count = 0;
 
-    handle(action: Action): ICommand | Action | void {
-        if (RequestCodeToClassDiagramAction.is(action)) {
-            this.count += action.increase;
-            console.log(`Hello World from the GLSP Client: ${this.count}`);
-            return CodeToClassDiagramActionResponse.create({
-                count: this.count
-            });
-        }
-    }
-}
+//     handle(action: Action): ICommand | Action | void {
+//         if (RequestCodeToClassDiagramAction.is(action)) {
+//             this.count += action.increase;
+//             console.log(`Hello World from the GLSP Client: ${this.count}`);
+//             return CodeToClassDiagramActionResponse.create({
+//                 count: this.count
+//             });
+//         }
+//     }
+// }

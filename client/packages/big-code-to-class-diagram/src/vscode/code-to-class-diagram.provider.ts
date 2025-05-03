@@ -8,7 +8,7 @@
  **********************************************************************************/
 import { BIGReactWebview } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { inject, injectable, postConstruct } from 'inversify';
-import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction } from '../common/code-to-class-diagram.action.js';
+import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction, RequestSelectFolderAction } from '../common/code-to-class-diagram.action.js';
 
 export const CodeToClassDiagramViewId = Symbol('CodeToClassDiagramViewId');
 
@@ -25,8 +25,9 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
     protected override init(): void {
         super.init();
 
-        this.toDispose.push(this.actionCache);
+        // this.toDispose.push(this.actionCache);
     }
+
 
     protected override handleConnection(): void {
         super.handleConnection();
@@ -35,11 +36,13 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
             this.actionCache.onDidChange(message => this.webviewConnector.dispatch(message)),
             this.webviewConnector.onReady(() => {
                 this.requestCount();
+                this.requestFolder();
                 this.webviewConnector.dispatch(this.actionCache.getActions());
             }),
             this.webviewConnector.onVisible(() => this.webviewConnector.dispatch(this.actionCache.getActions())),
             this.connectionManager.onDidActiveClientChange(() => {
                 this.requestCount();
+                this.requestFolder();
             }),
             this.connectionManager.onNoActiveClient(() => {
                 // Send a message to the webview when there is no active client
@@ -51,7 +54,60 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
             }),
             this.modelState.onDidChangeModelState(() => {
                 this.requestCount();
+                this.requestFolder();
             })
+        );
+            // this.webviewConnector.onReady(() => {
+            //     // On startup, just restore previous state — don't trigger folder select!
+            //     this.webviewConnector.dispatch(this.actionCache.getActions());
+            // }),
+
+            // this.webviewConnector.onVisible(() => {
+            //     this.webviewConnector.dispatch(this.actionCache.getActions());
+            // })
+
+        this.toDispose.push(
+            this.actionCache.onDidChange(message => this.webviewConnector.dispatch(message))
+        )
+    }
+
+    // protected override handleConnection(): void {
+    //     super.handleConnection();
+
+    //     this.toDispose.push(
+    //         // this.actionCache.onDidChange(message => this.webviewConnector.dispatch(message)),
+    //         this.webviewConnector.onReady(() => {
+    //             // this.requestCount();
+    //             // this.selectFolder();
+    //             // this.actionDispatcher.dispatch(InitClientHandshakeAction.create());
+    //             // this.webviewConnector.dispatch(this.actionCache.getActions());
+    //             this.requestFolder();
+    //         }),
+    //         // this.webviewConnector.onVisible(() => this.webviewConnector.dispatch(this.actionCache.getActions())),
+    //         this.connectionManager.onDidActiveClientChange(() => {
+    //             // this.requestCount();
+    //             // this.selectFolder();
+    //             this.requestFolder();
+    //         }),
+    //         // this.connectionManager.onNoActiveClient(() => {
+    //         //     // Send a message to the webview when there is no active client
+    //         //     this.webviewConnector.dispatch(RequestSelectFolderAction.create());
+    //         // }),
+    //         // this.connectionManager.onNoConnection(() => {
+    //         //     // Send a message to the webview when there is no glsp client
+    //         //     // this.webviewConnector.dispatch(CodeToClassDiagramActionResponse.create());
+    //         // }),
+    //         this.modelState.onDidChangeModelState(() => {
+    //             // this.requestCount();
+    //             // this.selectFolder();
+    //             this.requestFolder();
+    //         })
+    //     );
+    // }
+
+    protected requestFolder(): void {
+        this.actionDispatcher.dispatch(
+            RequestSelectFolderAction.create()
         );
     }
 
@@ -62,4 +118,14 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
             })
         );
     }
+
+    // protected selectFolder(): void {
+    //     this.actionDispatcher.dispatch(
+    //         RequestSelectFolderAction.create()
+    //     );
+    // }
+
+    // protected override initConnection(providerContext: BIGWebviewProviderContext): void {
+        
+    // }
 }

@@ -9,6 +9,7 @@
 
 import { TYPES } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { ContainerModule } from 'inversify';
+import { CodeToClassDiagramActionHandler } from './code-to-class-diagram.handler.js';
 import { CodeToClassDiagramProvider, CodeToClassDiagramViewId } from './code-to-class-diagram.provider.js';
 
 export function codeToClassDiagramModule(viewId: string) {
@@ -22,8 +23,9 @@ export function codeToClassDiagramModule(viewId: string) {
         // Remember to comment out the the glsp client handler!
         // In CodeToClassDiagramActionHandler implementation GLSP has priority over vscode
 
-        // bind(CodeToClassDiagramActionHandler).toSelf().inSingletonScope();
-        // bind(TYPES.Disposable).toService(CodeToClassDiagramActionHandler);
-        // bind(TYPES.RootInitialization).toService(CodeToClassDiagramActionHandler);
+        // Uncommented
+        bind(CodeToClassDiagramActionHandler).toSelf().inSingletonScope();
+        bind(TYPES.Disposable).toService(CodeToClassDiagramActionHandler);
+        bind(TYPES.RootInitialization).toService(CodeToClassDiagramActionHandler);
     });
 }
