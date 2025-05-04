@@ -18,7 +18,7 @@ import {
 import { DisposableCollection } from '@eclipse-glsp/protocol';
 import { inject, injectable, postConstruct } from 'inversify';
 import * as vscode from 'vscode';
-import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
+import { RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -31,11 +31,11 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     protected readonly modelState: ExperimentalGLSPServerModelState;
 
     private readonly toDispose = new DisposableCollection();
-    private count = 0;
+    //private count = 0;
 
     @postConstruct()
     protected init(): void {
-        this.toDispose.push(
+       /*  this.toDispose.push(
             this.actionListener.handleVSCodeRequest<RequestCodeToClassDiagramAction>(RequestCodeToClassDiagramAction.KIND, async message => {
                 this.count += message.action.increase;
                 console.log(`Hello World from VS Code: ${this.count}`);
@@ -43,7 +43,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     count: this.count
                 });
             })
-        );
+        ); */
 
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(
@@ -58,7 +58,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     const folderPath = folders?.[0]?.fsPath ?? null;
                     console.log('Selected folder:', folderPath);
 
-                    return SelectedFolderResponseAction.create({ folderPath });
+                    return SelectedFolderResponseAction.create({ folderPath: folderPath });
                 }
             )
         );

@@ -16,6 +16,7 @@ export function CodeToClassDiagram(): ReactElement {
 
     useEffect(() => {
         listenAction(action => {
+            console.log("ACTION", action)
             if (SelectedFolderResponseAction.is(action)) {
                 console.log("Action received");
                 setFolder(action.folderPath);
@@ -24,15 +25,16 @@ export function CodeToClassDiagram(): ReactElement {
         })
     })
 
-    // const openFile = () => {
-    //     console.log("Import File was Pressed!")
-    // };
+
 
     const openFile = useCallback(() => {
         console.log("Import File was Pressed!")
         dispatchAction(RequestSelectFolderAction.create());
         console.log("Action dispatched")
     }, [dispatchAction]);
+
+
+
 
     return (
         <div>

@@ -8,7 +8,7 @@
  **********************************************************************************/
 import { BIGReactWebview } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { inject, injectable, postConstruct } from 'inversify';
-import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction, RequestSelectFolderAction } from '../common/code-to-class-diagram.action.js';
+import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
 export const CodeToClassDiagramViewId = Symbol('CodeToClassDiagramViewId');
 
@@ -19,7 +19,7 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
 
     protected override cssPath = ['code-to-class-diagram', 'bundle.css'];
     protected override jsPath = ['code-to-class-diagram', 'bundle.js'];
-    protected readonly actionCache = this.actionListener.createCache([CodeToClassDiagramActionResponse.KIND]);
+    protected readonly actionCache = this.actionListener.createCache([SelectedFolderResponseAction.KIND]);
 
     @postConstruct()
     protected override init(): void {
@@ -47,10 +47,12 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
             this.connectionManager.onNoActiveClient(() => {
                 // Send a message to the webview when there is no active client
                 this.webviewConnector.dispatch(CodeToClassDiagramActionResponse.create());
+                this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
             }),
             this.connectionManager.onNoConnection(() => {
                 // Send a message to the webview when there is no glsp client
                 this.webviewConnector.dispatch(CodeToClassDiagramActionResponse.create());
+                this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
             }),
             this.modelState.onDidChangeModelState(() => {
                 this.requestCount();
