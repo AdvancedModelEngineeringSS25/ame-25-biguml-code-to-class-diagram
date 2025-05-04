@@ -22,8 +22,8 @@ export function CodeToClassDiagram(): ReactElement {
                 setFolder(action.folderPath);
                 console.log("Folder set: ", action.folderPath);
             }
-        })
-    })
+        });
+    }, [listenAction]);
 
     const openFile = useCallback(() => {
         console.log("Import File was Pressed!")
