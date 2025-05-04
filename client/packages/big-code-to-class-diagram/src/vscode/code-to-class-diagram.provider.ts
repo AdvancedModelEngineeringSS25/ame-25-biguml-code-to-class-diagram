@@ -8,7 +8,7 @@
  **********************************************************************************/
 import { BIGReactWebview } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { inject, injectable, postConstruct } from 'inversify';
-import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
+import { RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
 export const CodeToClassDiagramViewId = Symbol('CodeToClassDiagramViewId');
 
@@ -25,7 +25,7 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
     protected override init(): void {
         super.init();
 
-        // this.toDispose.push(this.actionCache);
+        this.toDispose.push(this.actionCache);
     }
 
 
@@ -33,44 +33,31 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
         super.handleConnection();
 
         this.toDispose.push(
-            this.actionCache.onDidChange(message => this.webviewConnector.dispatch(message)),
+            this.actionCache.onDidChange(message => {this.webviewConnector.dispatch(message)}),
             this.webviewConnector.onReady(() => {
-                this.requestCount();
                 this.requestFolder();
-                this.webviewConnector.dispatch(this.actionCache.getActions());
             }),
-            this.webviewConnector.onVisible(() => this.webviewConnector.dispatch(this.actionCache.getActions())),
+            //this.webviewConnector.onVisible(() => this.webviewConnector.dispatch(this.actionCache.getActions())),
             this.connectionManager.onDidActiveClientChange(() => {
-                this.requestCount();
+                console.warn("onDidActiveClientChange")
                 this.requestFolder();
             }),
             this.connectionManager.onNoActiveClient(() => {
+                console.warn("onNoActiveClient")
                 // Send a message to the webview when there is no active client
-                this.webviewConnector.dispatch(CodeToClassDiagramActionResponse.create());
                 this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
             }),
             this.connectionManager.onNoConnection(() => {
+                console.warn("onNoConnection")
                 // Send a message to the webview when there is no glsp client
-                this.webviewConnector.dispatch(CodeToClassDiagramActionResponse.create());
                 this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
             }),
             this.modelState.onDidChangeModelState(() => {
-                this.requestCount();
+                console.warn("onDidChangeModelState")
                 this.requestFolder();
             })
         );
-            // this.webviewConnector.onReady(() => {
-            //     // On startup, just restore previous state — don't trigger folder select!
-            //     this.webviewConnector.dispatch(this.actionCache.getActions());
-            // }),
 
-            // this.webviewConnector.onVisible(() => {
-            //     this.webviewConnector.dispatch(this.actionCache.getActions());
-            // })
-
-        this.toDispose.push(
-            this.actionCache.onDidChange(message => this.webviewConnector.dispatch(message))
-        )
     }
 
     // protected override handleConnection(): void {
@@ -113,14 +100,7 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
         );
     }
 
-    protected requestCount(): void {
-        this.actionDispatcher.dispatch(
-            RequestCodeToClassDiagramAction.create({
-                increase: 0
-            })
-        );
-    }
-
+    
     // protected selectFolder(): void {
     //     this.actionDispatcher.dispatch(
     //         RequestSelectFolderAction.create()

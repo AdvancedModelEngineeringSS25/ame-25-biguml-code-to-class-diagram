@@ -35,15 +35,6 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     @postConstruct()
     protected init(): void {
-       /*  this.toDispose.push(
-            this.actionListener.handleVSCodeRequest<RequestCodeToClassDiagramAction>(RequestCodeToClassDiagramAction.KIND, async message => {
-                this.count += message.action.increase;
-                console.log(`Hello World from VS Code: ${this.count}`);
-                return CodeToClassDiagramActionResponse.create({
-                    count: this.count
-                });
-            })
-        ); */
 
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(

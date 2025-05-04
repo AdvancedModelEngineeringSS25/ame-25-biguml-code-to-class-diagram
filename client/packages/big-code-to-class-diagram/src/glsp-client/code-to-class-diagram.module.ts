@@ -8,7 +8,7 @@
  **********************************************************************************/
 import { configureActionHandler, FeatureModule } from '@eclipse-glsp/client';
 import { ExtensionActionKind } from '@eclipse-glsp/vscode-integration-webview/lib/features/default/extension-action-handler.js';
-import { CodeToClassDiagramActionResponse, GenerateDiagramRequestAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
+import { GenerateDiagramRequestAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 import { CodeToClassDiagramHandler } from './code-to-class-diagram.handler.js';
 
 export const codeToClassDiagramModule = new FeatureModule((bind, unbind, isBound, rebind) => {
@@ -17,9 +17,7 @@ export const codeToClassDiagramModule = new FeatureModule((bind, unbind, isBound
     // bind(CodeToClassDiagramHandler).toSelf().inSingletonScope();
     configureActionHandler(context, GenerateDiagramRequestAction.KIND, CodeToClassDiagramHandler);
 
-    // Allow the CodeToClassDiagramActionResponse to propagate to the server
-    bind(ExtensionActionKind).toConstantValue(CodeToClassDiagramActionResponse.KIND);
-
+    // Allow the SelectedFolderResponseAction to propagate to the server
     // Added:
     bind(ExtensionActionKind).toConstantValue(SelectedFolderResponseAction.KIND);
     // bind(ExtensionActionKind).toConstantValue(InitClientHandshakeResponse.KIND);

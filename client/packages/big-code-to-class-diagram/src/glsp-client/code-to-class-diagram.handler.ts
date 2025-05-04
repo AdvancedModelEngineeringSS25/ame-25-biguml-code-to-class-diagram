@@ -26,7 +26,7 @@ export class CodeToClassDiagramHandler implements IActionHandler {
     handle(action: Action): ICommand | Action | void {
             if(GenerateDiagramRequestAction.is(action)) {
                 console.log("GLSP Client: Received action: ", action.kind);
-
+                
                 this.actionDispatcher.dispatch(
                     CreateNodeOperation.create("activityNode")
                 );
