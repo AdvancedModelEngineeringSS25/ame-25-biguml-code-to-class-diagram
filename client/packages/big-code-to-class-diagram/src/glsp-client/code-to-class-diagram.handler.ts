@@ -6,22 +6,33 @@
  *
  * SPDX-License-Identifier: MIT
  *********************************************************************************/
+import {
+    type Action,
+    CreateNodeOperation,
+    type IActionDispatcher,
+    type IActionHandler,
+    type ICommand,
+    TYPES
+} from '@eclipse-glsp/client';
+import { inject, injectable } from 'inversify';
+import { GenerateDiagramRequestAction } from '../common/code-to-class-diagram.action.js';
 
-// import type { Action, IActionHandler, ICommand } from '@eclipse-glsp/client';
-// import { injectable } from 'inversify';
-// import { CodeToClassDiagramActionResponse, RequestCodeToClassDiagramAction } from '../common/code-to-class-diagram.action.js';
+@injectable()
+export class CodeToClassDiagramHandler implements IActionHandler {
 
-// @injectable()
-// export class CodeToClassDiagramHandler implements IActionHandler {
-//     private count = 0;
+    @inject(TYPES.IActionDispatcher)
+    protected actionDispatcher: IActionDispatcher;
 
-//     handle(action: Action): ICommand | Action | void {
-//         if (RequestCodeToClassDiagramAction.is(action)) {
-//             this.count += action.increase;
-//             console.log(`Hello World from the GLSP Client: ${this.count}`);
-//             return CodeToClassDiagramActionResponse.create({
-//                 count: this.count
-//             });
-//         }
-//     }
-// }
+    handle(action: Action): ICommand | Action | void {
+            if(GenerateDiagramRequestAction.is(action)) {
+                console.log("GLSP Client: Received action: ", action.kind);
+
+                this.actionDispatcher.dispatch(
+                    CreateNodeOperation.create("activityNode")
+                );
+
+                console.log("GLSP Client: Action dispatched: ", action.kind);
+            }
+    }
+
+}

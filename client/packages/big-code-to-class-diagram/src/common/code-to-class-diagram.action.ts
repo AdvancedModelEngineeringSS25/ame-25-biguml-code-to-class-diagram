@@ -98,40 +98,40 @@ export namespace SelectedFolderResponseAction {
     }
 }
 
-// export interface InitClientHandshakeAction extends RequestAction<InitClientHandshakeResponse> {
-//     kind: typeof InitClientHandshakeAction.KIND;
-// }
+export interface GenerateDiagramRequestAction extends RequestAction<GenerateDiagramResponseAction> {
+    kind: typeof GenerateDiagramRequestAction.KIND;
+}
 
-// export namespace InitClientHandshakeAction {
-//     export const KIND = 'initClientHandshake';
+export namespace GenerateDiagramRequestAction {
+    export const KIND = 'generateDiagramRequest';
 
-//     export function is(object: unknown): object is InitClientHandshakeAction {
-//         return RequestAction.hasKind(object, KIND);
-//     }
+    export function is(object: unknown): object is GenerateDiagramRequestAction {
+        return RequestAction.hasKind(object, KIND);
+    }
 
-//     export function create(): InitClientHandshakeAction {
-//         return {
-//             kind: KIND,
-//             requestId: ''
-//         };
-//     }
-// }
+    export function create(): GenerateDiagramRequestAction {
+        return {
+            kind: KIND,
+            requestId: ''
+        };
+    }
+}
 
-// export interface InitClientHandshakeResponse extends ResponseAction {
-//     kind: typeof InitClientHandshakeResponse.KIND;
-// }
+export interface GenerateDiagramResponseAction extends ResponseAction {
+    kind: typeof GenerateDiagramResponseAction.KIND;
+}
 
-// export namespace InitClientHandshakeResponse {
-//     export const KIND = 'initClientHandshakeResponse';
+export namespace GenerateDiagramResponseAction {
+    export const KIND = 'generateDiagramResponse';
 
-//     export function is(object: unknown): object is InitClientHandshakeResponse {
-//         return Action.hasKind(object, KIND);
-//     }
+    export function is(object: unknown): object is GenerateDiagramResponseAction {
+        return Action.hasKind(object, KIND);
+    }
 
-//     export function create(): InitClientHandshakeResponse {
-//         return {
-//             kind: KIND,
-//             responseId: ''
-//         };
-//     }
-// }
+    export function create(): GenerateDiagramResponseAction {
+        return {
+            kind: KIND,
+            responseId: ''
+        };
+    }
+}

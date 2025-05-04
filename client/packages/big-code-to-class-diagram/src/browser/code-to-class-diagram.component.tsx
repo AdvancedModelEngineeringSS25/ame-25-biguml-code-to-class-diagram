@@ -8,7 +8,7 @@
  **********************************************************************************/
 import { VSCodeContext } from '@borkdominik-biguml/big-components';
 import { useCallback, useContext, useEffect, useState, type ReactElement } from 'react';
-import { RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
+import { GenerateDiagramRequestAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
 export function CodeToClassDiagram(): ReactElement {
     const { listenAction, dispatchAction } = useContext(VSCodeContext);
@@ -25,22 +25,24 @@ export function CodeToClassDiagram(): ReactElement {
         })
     })
 
-
-
     const openFile = useCallback(() => {
         console.log("Import File was Pressed!")
         dispatchAction(RequestSelectFolderAction.create());
-        console.log("Action dispatched")
+        console.log("Action dispatched: import file")
     }, [dispatchAction]);
 
-
-
+    const generateDiagram = useCallback(() => {
+        console.log("Generate diagram button was Pressed!")
+        dispatchAction(GenerateDiagramRequestAction.create());
+        console.log("Action dispatched: generate diagram")
+    }, [dispatchAction]);
 
     return (
         <div>
             <span>CODE TO CLASS DIAGRAM!</span>
             <span>Selected Folder: {folder}</span>
             <button onClick={() => openFile()}>Import File</button>
+            <button onClick={() => generateDiagram()}>Generate Diagram</button>
         </div>
     );
 }
