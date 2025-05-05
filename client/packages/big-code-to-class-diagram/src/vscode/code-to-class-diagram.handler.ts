@@ -20,6 +20,10 @@ import * as fs from 'fs/promises';
 import { inject, injectable, postConstruct } from 'inversify';
 import * as path from 'path';
 import * as vscode from 'vscode';
+
+/* import Parser from 'tree-sitter'; 
+import Java from 'tree-sitter-java';  */
+
 import { GenerateDiagramRequestAction, GenerateDiagramResponseAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
 // Handle the action within the server and not the glsp client / server
@@ -70,8 +74,19 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 GenerateDiagramRequestAction.KIND,
                 async () => {
                     console.log("GenerateDiagramRequestAction");
-                    console.log("Folder Received: ",this.path);
                     const file = await readJavaFilesAsMap(this.path);
+
+                    
+
+                    /* const parser = new Parser();
+                    console.log(parser)
+                     parser.setLanguage(Java as unknown as Parser.Language);
+                    const test = file.get("NoMapping")
+                    if(test){
+                        const tree = parser.parse(test);
+                        console.log("TREE:", tree)
+                    } */
+ 
                     console.log("READ FILE CONTENT ", file.get("NoMapping"));
                     return GenerateDiagramResponseAction.create();
                 }
