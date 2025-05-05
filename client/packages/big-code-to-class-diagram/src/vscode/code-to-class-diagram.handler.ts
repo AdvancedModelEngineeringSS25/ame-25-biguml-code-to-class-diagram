@@ -21,8 +21,7 @@ import { inject, injectable, postConstruct } from 'inversify';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-/* import Parser from 'tree-sitter'; 
-import Java from 'tree-sitter-java';  */
+
 
 import { GenerateDiagramRequestAction, GenerateDiagramResponseAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
@@ -76,16 +75,11 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     console.log("GenerateDiagramRequestAction");
                     const file = await readJavaFilesAsMap(this.path);
 
-                    
-
-                    /* const parser = new Parser();
-                    console.log(parser)
-                     parser.setLanguage(Java as unknown as Parser.Language);
+                
                     const test = file.get("NoMapping")
                     if(test){
-                        const tree = parser.parse(test);
-                        console.log("TREE:", tree)
-                    } */
+                       
+                    } 
  
                     console.log("READ FILE CONTENT ", file.get("NoMapping"));
                     return GenerateDiagramResponseAction.create();
