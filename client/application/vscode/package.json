@@ -313,7 +313,9 @@
     "scheduler": "^0.25.0",
     "urijs": "^1.19.11",
     "vscode-messenger": "^0.4.5",
-    "vscode-messenger-common": "^0.4.5"
+    "vscode-messenger-common": "^0.4.5",
+    "tree-sitter": "^0.21.1",
+    "tree-sitter-java": "^0.23.5"
   },
   "devDependencies": {
     "@eclipse-glsp/vscode-integration-webview": "*",

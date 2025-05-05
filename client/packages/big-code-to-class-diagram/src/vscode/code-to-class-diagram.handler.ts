@@ -19,9 +19,8 @@ import { DisposableCollection } from '@eclipse-glsp/protocol';
 import * as fs from 'fs/promises';
 import { inject, injectable, postConstruct } from 'inversify';
 import * as path from 'path';
+import Parser from 'tree-sitter';
 import * as vscode from 'vscode';
-
-
 
 import { GenerateDiagramRequestAction, GenerateDiagramResponseAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
@@ -45,6 +44,9 @@ export class CodeToClassDiagramActionHandler implements Disposable {
             this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(
                 RequestSelectFolderAction.KIND,
                 async () => {
+                    // Problem arises with the following (tree-sitter)
+                    new Parser();
+
                     const folders = await vscode.window.showOpenDialog({
                         canSelectFolders: true,
                         canSelectMany: false,
@@ -74,12 +76,11 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 async () => {
                     console.log("GenerateDiagramRequestAction");
                     const file = await readJavaFilesAsMap(this.path);
-
-                
-                    const test = file.get("NoMapping")
-                    if(test){
+               
+                    // const test = file.get("NoMapping")
+                    // if(test){
                        
-                    } 
+                    // } 
  
                     console.log("READ FILE CONTENT ", file.get("NoMapping"));
                     return GenerateDiagramResponseAction.create();
