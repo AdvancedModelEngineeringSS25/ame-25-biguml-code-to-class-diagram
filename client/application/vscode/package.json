@@ -311,11 +311,11 @@
     "react-dom": "^18.0.0",
     "reflect-metadata": "^0.2.2",
     "scheduler": "^0.25.0",
+    "tree-sitter-java": "^0.23.5",
     "urijs": "^1.19.11",
     "vscode-messenger": "^0.4.5",
     "vscode-messenger-common": "^0.4.5",
-    "tree-sitter": "^0.21.1",
-    "tree-sitter-java": "^0.23.5"
+    "web-tree-sitter": "^0.25.3"
   },
   "devDependencies": {
     "@eclipse-glsp/vscode-integration-webview": "*",

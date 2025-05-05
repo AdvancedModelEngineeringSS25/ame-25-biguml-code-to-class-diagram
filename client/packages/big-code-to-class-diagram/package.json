@@ -51,7 +51,7 @@
     "lint": "eslint -c ./eslint.config.js",
     "lint:fix": "npm run lint -- --fix",
     "tsc": "tsc",
-    "watch": "concurrently --kill-others 'npm run compile -- --watch' 'npm run bundle -- --watch'"
+    "watch": "concurrently --kill-others \"npm run compile -- --watch\" \"npm run bundle -- --watch\""
   },
   "dependencies": {
     "@borkdominik-biguml/big-components": "*",
@@ -60,9 +60,9 @@
     "@eclipse-glsp/client": "*",
     "@eclipse-glsp/protocol": "*",
     "@eclipse-glsp/vscode-integration-webview": "*",
-    "tree-sitter": "^0.21.1",
     "tree-sitter-java": "^0.23.5",
-    "vscode-messenger-common": "^0.4.5"
+    "vscode-messenger-common": "^0.4.5",
+    "web-tree-sitter": "^0.25.3"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",

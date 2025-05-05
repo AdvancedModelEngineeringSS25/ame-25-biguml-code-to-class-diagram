@@ -19,10 +19,14 @@ import { DisposableCollection } from '@eclipse-glsp/protocol';
 import * as fs from 'fs/promises';
 import { inject, injectable, postConstruct } from 'inversify';
 import * as path from 'path';
-import Parser from 'tree-sitter';
 import * as vscode from 'vscode';
-
-import { GenerateDiagramRequestAction, GenerateDiagramResponseAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
+import { Language, Parser } from 'web-tree-sitter';
+import {
+    GenerateDiagramRequestAction,
+    GenerateDiagramResponseAction,
+    RequestSelectFolderAction,
+    SelectedFolderResponseAction
+} from '../common/code-to-class-diagram.action.js';
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -33,67 +37,73 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     protected readonly actionListener: ActionListener;
     @inject(EXPERIMENTAL_TYPES.GLSPServerModelState)
     protected readonly modelState: ExperimentalGLSPServerModelState;
+    @inject(TYPES.ExtensionContext)
+    protected readonly extensionContext: vscode.ExtensionContext;
 
     private readonly toDispose = new DisposableCollection();
     private path: string | null = null;
 
     @postConstruct()
     protected init(): void {
-
         this.toDispose.push(
-            this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(
-                RequestSelectFolderAction.KIND,
-                async () => {
-                    // Problem arises with the following (tree-sitter)
-                    new Parser();
+            this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(RequestSelectFolderAction.KIND, async () => {
+                await this.doInit();
+                const folders = await vscode.window.showOpenDialog({
+                    canSelectFolders: true,
+                    canSelectMany: false,
+                    openLabel: 'Select Folder'
+                });
 
-                    const folders = await vscode.window.showOpenDialog({
-                        canSelectFolders: true,
-                        canSelectMany: false,
-                        openLabel: 'Select Folder'
-                    });
-        
-                    const folderPath = folders?.[0]?.fsPath ?? null;
-                    console.log('Selected folder:', folderPath);
-                    this.path = folderPath;
-                    
-                    const javaFileCount = await countJavaFiles(folderPath);
-                    console.log(`Found ${javaFileCount} .java files in ${folderPath}`);
-        
-                    return SelectedFolderResponseAction.create({
-                        folderPath: folderPath,
-                        javaFileCount: javaFileCount
-                    });
-                }
-            )
+                const folderPath = folders?.[0]?.fsPath ?? null;
+                console.log('Selected folder:', folderPath);
+                this.path = folderPath;
 
-            
+                const javaFileCount = await countJavaFiles(folderPath);
+                console.log(`Found ${javaFileCount} .java files in ${folderPath}`);
+
+                return SelectedFolderResponseAction.create({
+                    folderPath: folderPath,
+                    javaFileCount: javaFileCount
+                });
+            })
         );
 
         this.toDispose.push(
-            this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(
-                GenerateDiagramRequestAction.KIND,
-                async () => {
-                    console.log("GenerateDiagramRequestAction");
-                    const file = await readJavaFilesAsMap(this.path);
-               
-                    // const test = file.get("NoMapping")
-                    // if(test){
-                       
-                    // } 
- 
-                    console.log("READ FILE CONTENT ", file.get("NoMapping"));
-                    return GenerateDiagramResponseAction.create();
-                }
-            )
-        )
+            this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
+                console.log('GenerateDiagramRequestAction');
+                const file = await readJavaFilesAsMap(this.path);
 
+                // const test = file.get("NoMapping")
+                // if(test){
+
+                // }
+
+                console.log('READ FILE CONTENT ', file.get('NoMapping'));
+                return GenerateDiagramResponseAction.create();
+            })
+        );
     }
-
-    
 
     dispose(): void {
         this.toDispose.dispose();
+    }
+
+    protected async doInit(): Promise<void> {
+        // Problem arises with the following (tree-sitter)
+        const sitterUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter.wasm');
+        const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter-java.wasm');
+        console.log('asd2', sitterUri.toString(), javaUri.toString());
+        /*
+        await Parser.init({
+            locateFile(scriptName: string, scriptDirectory: string) {
+                console.log('==', scriptName, scriptDirectory);
+                return sitterUri.toString();
+            }
+        });
+        */
+        const java = await Language.load(javaUri.toString());
+        const parser = new Parser();
+        parser.setLanguage(java);
     }
 }
 
@@ -102,7 +112,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
  */
 async function countJavaFiles(dirPath: string | null): Promise<number> {
     let count = 0;
-    if(!dirPath) return 0;
+    if (!dirPath) return 0;
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -121,7 +131,7 @@ async function readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, s
     const fileMap = new Map<string, string>();
 
     async function readDirRecursive(currentPath: string | null) {
-        if(!currentPath) return;
+        if (!currentPath) return;
         const entries = await fs.readdir(currentPath, { withFileTypes: true });
 
         for (const entry of entries) {
