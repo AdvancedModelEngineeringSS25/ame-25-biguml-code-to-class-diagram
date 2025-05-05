@@ -13,6 +13,7 @@ import { GenerateDiagramRequestAction, RequestSelectFolderAction, SelectedFolder
 export function CodeToClassDiagram(): ReactElement {
     const { listenAction, dispatchAction } = useContext(VSCodeContext);
     const [folder, setFolder] = useState<string | null>(null);
+    const [javaFileCount, setJavaFileCount] = useState<number | null>(null);
 
     useEffect(() => {
         listenAction(action => {
@@ -20,7 +21,9 @@ export function CodeToClassDiagram(): ReactElement {
             if (SelectedFolderResponseAction.is(action)) {
                 console.log("Action received");
                 setFolder(action.folderPath);
+                setJavaFileCount(action.javaFileCount);
                 console.log("Folder set: ", action.folderPath);
+                console.log("Number of Classes: ", action.javaFileCount);
             }
         });
     }, [listenAction]);
@@ -41,6 +44,7 @@ export function CodeToClassDiagram(): ReactElement {
         <div>
             <span>CODE TO CLASS DIAGRAM!</span>
             <span>Selected Folder: {folder}</span>
+            <span>Files used for file generation: {javaFileCount}</span>
             <button onClick={() => openFile()}>Import File</button>
             <button onClick={() => generateDiagram()}>Generate Diagram</button>
         </div>

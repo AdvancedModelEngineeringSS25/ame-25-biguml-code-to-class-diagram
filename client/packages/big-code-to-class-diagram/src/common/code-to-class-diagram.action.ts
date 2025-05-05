@@ -35,6 +35,7 @@ export namespace RequestSelectFolderAction {
 export interface SelectedFolderResponseAction extends ResponseAction {
     kind: typeof SelectedFolderResponseAction.KIND;
     folderPath: string | null;
+    javaFileCount: number | null;
 }
 
 export namespace SelectedFolderResponseAction {
@@ -51,10 +52,12 @@ export namespace SelectedFolderResponseAction {
             kind: KIND,
             responseId: '',
             folderPath: null,
+            javaFileCount: null,
             ...options
         };
     }
 }
+
 
 export interface GenerateDiagramRequestAction extends RequestAction<GenerateDiagramResponseAction> {
     kind: typeof GenerateDiagramRequestAction.KIND;

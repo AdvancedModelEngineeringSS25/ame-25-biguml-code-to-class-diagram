@@ -6,9 +6,9 @@
  *
  * SPDX-License-Identifier: MIT
  *********************************************************************************/
-import {
+/* import {
     type Action,
-    CreateNodeOperation,
+    //CreateNodeOperation,
     type IActionDispatcher,
     type IActionHandler,
     type ICommand,
@@ -16,6 +16,7 @@ import {
 } from '@eclipse-glsp/client';
 import { inject, injectable } from 'inversify';
 import { GenerateDiagramRequestAction } from '../common/code-to-class-diagram.action.js';
+
 
 @injectable()
 export class CodeToClassDiagramHandler implements IActionHandler {
@@ -27,12 +28,16 @@ export class CodeToClassDiagramHandler implements IActionHandler {
             if(GenerateDiagramRequestAction.is(action)) {
                 console.log("GLSP Client: Received action: ", action.kind);
                 
-                this.actionDispatcher.dispatch(
+
+                 this.actionDispatcher.dispatch(
                     CreateNodeOperation.create("activityNode")
-                );
+                ); 
 
                 console.log("GLSP Client: Action dispatched: ", action.kind);
             }
     }
 
+    
+
 }
+ */
