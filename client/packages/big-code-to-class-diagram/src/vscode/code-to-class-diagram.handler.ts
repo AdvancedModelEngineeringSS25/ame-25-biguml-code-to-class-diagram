@@ -88,17 +88,10 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
     protected async doInit(): Promise<void> {
-        const sitterUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter.wasm');
+        //const sitterUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter.wasm');
         const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter-java.wasm');
 
-        // Explicitly tell Tree-sitter where the core runtime is
-        (globalThis as any).TreeSitter = { 
-            locateFile() {
-                return sitterUri.toString(); // Return correct wasm URI
-            }
-        };
-
-        await Parser.init(); // Now this will work
+        await Parser.init(); 
         const java = await Language.load(javaUri.toString());
         
         this.parser = new Parser();
