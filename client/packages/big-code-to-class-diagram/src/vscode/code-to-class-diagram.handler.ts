@@ -21,13 +21,14 @@ import { inject, injectable, postConstruct } from 'inversify';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { Tree } from 'web-tree-sitter';
-import Parser, { Language, } from 'web-tree-sitter';
+import Parser, { Language } from 'web-tree-sitter';
 import {
     GenerateDiagramRequestAction,
     GenerateDiagramResponseAction,
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
+
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -88,14 +89,21 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
     protected async doInit(): Promise<void> {
-        //const sitterUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter.wasm');
-        const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter-java.wasm');
+        await Parser.init();
 
-        await Parser.init(); 
+        // Problem arises with the following (tree-sitter)
+        const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter-java.wasm');
+        /*
+        await Parser.init({
+            locateFile(scriptName: string, scriptDirectory: string) {
+                console.log('==', scriptName, scriptDirectory);
+                return sitterUri.toString();
+            }
+        });
+        */
         const java = await Language.load(javaUri.toString());
-        
-        this.parser = new Parser();
-        this.parser.setLanguage(java);
+        const parser = new Parser();
+        parser.setLanguage(java);
     }
 
     async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string,Tree|null>> {
