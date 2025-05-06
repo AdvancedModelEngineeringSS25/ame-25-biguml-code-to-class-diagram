@@ -62,7 +62,7 @@
     "@eclipse-glsp/vscode-integration-webview": "*",
     "tree-sitter-java": "^0.23.5",
     "vscode-messenger-common": "^0.4.5",
-    "web-tree-sitter": "^0.24.5"
+    "web-tree-sitter": "^0.25.3"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
