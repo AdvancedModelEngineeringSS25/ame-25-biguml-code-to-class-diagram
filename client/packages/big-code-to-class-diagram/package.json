@@ -60,15 +60,16 @@
     "@eclipse-glsp/client": "*",
     "@eclipse-glsp/protocol": "*",
     "@eclipse-glsp/vscode-integration-webview": "*",
-    "tree-sitter-java": "^0.23.5",
     "vscode-messenger-common": "^0.4.5",
-    "web-tree-sitter": "^0.25.3"
+    "web-tree-sitter": "^0.22.5"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "tree-sitter-cli": "^0.25.3",
+    "tree-sitter-java": "^0.23.5"
   },
   "peerDependencies": {
     "inversify": "^6.1.3",

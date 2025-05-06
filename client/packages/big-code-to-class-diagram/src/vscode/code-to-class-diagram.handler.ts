@@ -20,7 +20,8 @@ import * as fs from 'fs/promises';
 import { inject, injectable, postConstruct } from 'inversify';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Language, Parser } from 'web-tree-sitter';
+import type { Tree } from 'web-tree-sitter';
+import Parser, { Language, } from 'web-tree-sitter';
 import {
     GenerateDiagramRequestAction,
     GenerateDiagramResponseAction,
@@ -42,6 +43,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     private readonly toDispose = new DisposableCollection();
     private path: string | null = null;
+    private parser: Parser | null = null;
 
     @postConstruct()
     protected init(): void {
@@ -58,7 +60,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 console.log('Selected folder:', folderPath);
                 this.path = folderPath;
 
-                const javaFileCount = await countJavaFiles(folderPath);
+                const javaFileCount = await countNumberOfJavaFiles(folderPath);
                 console.log(`Found ${javaFileCount} .java files in ${folderPath}`);
 
                 return SelectedFolderResponseAction.create({
@@ -71,12 +73,9 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
                 console.log('GenerateDiagramRequestAction');
-                const file = await readJavaFilesAsMap(this.path);
+                const file = await this.readJavaFilesAsMap(this.path);
 
-                // const test = file.get("NoMapping")
-                // if(test){
-
-                // }
+                
 
                 console.log('READ FILE CONTENT ', file.get('NoMapping'));
                 return GenerateDiagramResponseAction.create();
@@ -89,28 +88,54 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
     protected async doInit(): Promise<void> {
-        // Problem arises with the following (tree-sitter)
         const sitterUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter.wasm');
         const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter-java.wasm');
-        console.log('asd2', sitterUri.toString(), javaUri.toString());
-        /*
-        await Parser.init({
-            locateFile(scriptName: string, scriptDirectory: string) {
-                console.log('==', scriptName, scriptDirectory);
-                return sitterUri.toString();
+
+        // Explicitly tell Tree-sitter where the core runtime is
+        (globalThis as any).TreeSitter = { 
+            locateFile() {
+                return sitterUri.toString(); // Return correct wasm URI
             }
-        });
-        */
+        };
+
+        await Parser.init(); // Now this will work
         const java = await Language.load(javaUri.toString());
-        const parser = new Parser();
-        parser.setLanguage(java);
+        
+        this.parser = new Parser();
+        this.parser.setLanguage(java);
+    }
+
+    async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string,Tree|null>> {
+        const fileMap = new Map<string,Tree|null>();
+    
+        const readDirRecursive = async (currentPath: string | null) => {
+            if (!currentPath) return;
+            const entries = await fs.readdir(currentPath, { withFileTypes: true });
+    
+            for (const entry of entries) {
+                const fullPath = path.join(currentPath, entry.name);
+                if (entry.isDirectory()) {
+                    await readDirRecursive(fullPath);
+                } else if (entry.isFile() && entry.name.endsWith('.java')) {
+                    try {
+                        const content = await fs.readFile(fullPath, 'utf-8');
+                        const parsedContent = this.parser?.parse(content);
+                        if(parsedContent){
+                            fileMap.set(entry.name.replace(/\.java$/, ''), parsedContent);
+                        }
+                    } catch (err) {
+                        console.error(`Failed to read file ${fullPath}:`, err);
+                    }
+                }
+            }
+        }
+    
+        await readDirRecursive(dirPath);
+        return fileMap;
     }
 }
 
-/**
- * Recursively counts all `.java` files in the given directory.
- */
-async function countJavaFiles(dirPath: string | null): Promise<number> {
+async function countNumberOfJavaFiles(dirPath: string | null): Promise<number> {
     let count = 0;
     if (!dirPath) return 0;
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -118,7 +143,7 @@ async function countJavaFiles(dirPath: string | null): Promise<number> {
     for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
         if (entry.isDirectory()) {
-            count += await countJavaFiles(fullPath); // Recurse
+            count += await countNumberOfJavaFiles(fullPath); // Recurse
         } else if (entry.isFile() && entry.name.endsWith('.java')) {
             count++;
         }
@@ -127,28 +152,4 @@ async function countJavaFiles(dirPath: string | null): Promise<number> {
     return count;
 }
 
-async function readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, string>> {
-    const fileMap = new Map<string, string>();
 
-    async function readDirRecursive(currentPath: string | null) {
-        if (!currentPath) return;
-        const entries = await fs.readdir(currentPath, { withFileTypes: true });
-
-        for (const entry of entries) {
-            const fullPath = path.join(currentPath, entry.name);
-            if (entry.isDirectory()) {
-                await readDirRecursive(fullPath);
-            } else if (entry.isFile() && entry.name.endsWith('.java')) {
-                try {
-                    const content = await fs.readFile(fullPath, 'utf-8');
-                    fileMap.set(entry.name.replace(/\.java$/, ''), content);
-                } catch (err) {
-                    console.error(`Failed to read file ${fullPath}:`, err);
-                }
-            }
-        }
-    }
-
-    await readDirRecursive(dirPath);
-    return fileMap;
-}

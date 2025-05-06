@@ -8,7 +8,7 @@
  **********************************************************************************/
 import { BIGReactWebview } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { inject, injectable, postConstruct } from 'inversify';
-import { RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
+import { GenerateDiagramRequestAction, GenerateDiagramResponseAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
 
 export const CodeToClassDiagramViewId = Symbol('CodeToClassDiagramViewId');
 
@@ -31,83 +31,48 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
 
     protected override handleConnection(): void {
         super.handleConnection();
-
+    
         this.toDispose.push(
             this.actionCache.onDidChange(message => {this.webviewConnector.dispatch(message)}),
             this.webviewConnector.onReady(() => {
                 this.requestFolder();
+                this.requestDiagram();
             }),
-            //this.webviewConnector.onVisible(() => this.webviewConnector.dispatch(this.actionCache.getActions())),
             this.connectionManager.onDidActiveClientChange(() => {
                 console.warn("onDidActiveClientChange")
                 this.requestFolder();
+                this.requestDiagram();
             }),
             this.connectionManager.onNoActiveClient(() => {
                 console.warn("onNoActiveClient")
                 // Send a message to the webview when there is no active client
                 this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
+                this.webviewConnector.dispatch(GenerateDiagramResponseAction.create());
             }),
             this.connectionManager.onNoConnection(() => {
                 console.warn("onNoConnection")
                 // Send a message to the webview when there is no glsp client
                 this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
+                this.webviewConnector.dispatch(GenerateDiagramResponseAction.create());
             }),
             this.modelState.onDidChangeModelState(() => {
                 console.warn("onDidChangeModelState")
                 this.requestFolder();
+                this.requestDiagram();
             })
         );
-
+    
     }
-
-    // protected override handleConnection(): void {
-    //     super.handleConnection();
-
-    //     this.toDispose.push(
-    //         // this.actionCache.onDidChange(message => this.webviewConnector.dispatch(message)),
-    //         this.webviewConnector.onReady(() => {
-    //             // this.requestCount();
-    //             // this.selectFolder();
-    //             // this.actionDispatcher.dispatch(InitClientHandshakeAction.create());
-    //             // this.webviewConnector.dispatch(this.actionCache.getActions());
-    //             this.requestFolder();
-    //         }),
-    //         // this.webviewConnector.onVisible(() => this.webviewConnector.dispatch(this.actionCache.getActions())),
-    //         this.connectionManager.onDidActiveClientChange(() => {
-    //             // this.requestCount();
-    //             // this.selectFolder();
-    //             this.requestFolder();
-    //         }),
-    //         // this.connectionManager.onNoActiveClient(() => {
-    //         //     // Send a message to the webview when there is no active client
-    //         //     this.webviewConnector.dispatch(RequestSelectFolderAction.create());
-    //         // }),
-    //         // this.connectionManager.onNoConnection(() => {
-    //         //     // Send a message to the webview when there is no glsp client
-    //         //     // this.webviewConnector.dispatch(CodeToClassDiagramActionResponse.create());
-    //         // }),
-    //         this.modelState.onDidChangeModelState(() => {
-    //             // this.requestCount();
-    //             // this.selectFolder();
-    //             this.requestFolder();
-    //         })
-    //     );
-    // }
-
+    
     protected requestFolder(): void {
         this.actionDispatcher.dispatch(
             RequestSelectFolderAction.create()
         );
     }
-
     
-    // protected selectFolder(): void {
-    //     this.actionDispatcher.dispatch(
-    //         RequestSelectFolderAction.create()
-    //     );
-    // }
-
-    // protected override initConnection(providerContext: BIGWebviewProviderContext): void {
-        
-    // }
+    protected requestDiagram(): void {
+        this.actionDispatcher.dispatch(
+            GenerateDiagramRequestAction.create()
+        );
+    }
 }
