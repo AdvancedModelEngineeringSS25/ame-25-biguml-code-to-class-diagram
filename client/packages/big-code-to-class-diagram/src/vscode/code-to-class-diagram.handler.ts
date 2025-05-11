@@ -21,14 +21,13 @@ import { inject, injectable, postConstruct } from 'inversify';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { Tree } from 'web-tree-sitter';
-import Parser, { Language } from 'web-tree-sitter';
+import * as treeSitter from 'web-tree-sitter';
 import {
     GenerateDiagramRequestAction,
     GenerateDiagramResponseAction,
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
-
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -44,7 +43,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     private readonly toDispose = new DisposableCollection();
     private path: string | null = null;
-    private parser: Parser | null = null;
+    private parser: treeSitter.Parser | null = null;
 
     @postConstruct()
     protected init(): void {
@@ -76,8 +75,6 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 console.log('GenerateDiagramRequestAction');
                 const file = await this.readJavaFilesAsMap(this.path);
 
-                
-
                 console.log('READ FILE CONTENT ', file.get('NoMapping'));
                 return GenerateDiagramResponseAction.create();
             })
@@ -89,30 +86,32 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
     protected async doInit(): Promise<void> {
-        await Parser.init();
+        await treeSitter.Parser.init();
 
         // Problem arises with the following (tree-sitter)
-        const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'wasm', 'tree-sitter-java.wasm');
-        /*
-        await Parser.init({
-            locateFile(scriptName: string, scriptDirectory: string) {
-                console.log('==', scriptName, scriptDirectory);
-                return sitterUri.toString();
-            }
-        });
-        */
-        const java = await Language.load(javaUri.toString());
-        const parser = new Parser();
+        const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'lib', 'tree-sitter-java.wasm');
+        const java = await treeSitter.Language.load(javaUri.path);
+        const parser = new treeSitter.Parser();
         parser.setLanguage(java);
+        const parsed = parser.parse(`
+// Simple Java Hello World Program
+public class HelloWorld
+{
+    public static void main(String[] args)
+    {
+        System.out.println(“Hello, World”);
+    }
+}`);
+        console.log('Parsed tree: ', parsed?.rootNode.text);
     }
 
-    async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string,Tree|null>> {
-        const fileMap = new Map<string,Tree|null>();
-    
+    async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree | null>> {
+        const fileMap = new Map<string, Tree | null>();
+
         const readDirRecursive = async (currentPath: string | null) => {
             if (!currentPath) return;
             const entries = await fs.readdir(currentPath, { withFileTypes: true });
-    
+
             for (const entry of entries) {
                 const fullPath = path.join(currentPath, entry.name);
                 if (entry.isDirectory()) {
@@ -121,7 +120,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     try {
                         const content = await fs.readFile(fullPath, 'utf-8');
                         const parsedContent = this.parser?.parse(content);
-                        if(parsedContent){
+                        if (parsedContent) {
                             fileMap.set(entry.name.replace(/\.java$/, ''), parsedContent);
                         }
                     } catch (err) {
@@ -129,8 +128,8 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     }
                 }
             }
-        }
-    
+        };
+
         await readDirRecursive(dirPath);
         return fileMap;
     }
@@ -152,5 +151,3 @@ async function countNumberOfJavaFiles(dirPath: string | null): Promise<number> {
 
     return count;
 }
-
-

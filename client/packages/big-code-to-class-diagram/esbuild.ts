@@ -23,10 +23,6 @@ const runner = new ESBuildRunner({
                 {
                     from: ['dist/**/*'],
                     to: ['../../application/vscode/webviews/code-to-class-diagram']
-                },
-                {
-                    from: ['./src/vscode/tree-sitter-java.wasm'],
-                    to: ['../../application/vscode/webviews/code-to-class-diagram']
                 }
             ]
         })
