@@ -47,7 +47,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     private readonly toDispose = new DisposableCollection();
     private path: string | null = null;
     private parser: treeSitter.Parser | null = null;
-    private fileMap = new Map<string, Tree | null>();
+    private fileMap = new Map<string, Tree>();
     private diagram: Diagram = {edges: [], nodes: []}
 
     @postConstruct()
@@ -77,6 +77,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
+                this.diagram = {edges: [], nodes: []}
                 this.fileMap = await this.readJavaFilesAsMap(this.path);
                 const nodes = await Promise.all(
                     Array.from(this.fileMap.entries()).map(async ([key, value]) => {
@@ -110,7 +111,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         this.parser = parser;
     }
 
-    async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree | null>> {
+    async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree>> {
         this.diagram.edges = []
 
         const readDirRecursive = async (currentPath: string | null) => {
@@ -156,18 +157,47 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return count;
     }
 
-    async createNode(name: string, tree: Tree | null): Promise<DiagramNode> {
+    async createNode(name: string, tree: Tree): Promise<DiagramNode> {
 
 
         const c : DiagramNode = {
             name: name,
-            type: 'abstract-class', //TODO
+            type: await this.getNodeType(tree), //TODO
             properties: await this.getFields(tree),
             operations: await this.getMethods(tree),
             comment: '' //TODO
         }
 
         return c;
+    }
+
+    async getNodeType(tree: Tree): Promise<DiagramNode['type']>  {
+
+        const classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
+        if (classNode){
+            const modifiersNode = classNode.descendantsOfType('modifiers'); 
+            if (modifiersNode){
+                for(const modifier of modifiersNode){
+                    const modifierTexts = modifier?.text
+                    if (modifierTexts?.includes('abstract')) {
+                        return 'abstract-class'
+                    } 
+                }  
+            }
+            return 'class'
+        } 
+
+        const interfaceNode = tree.rootNode.descendantsOfType('interface_declaration')[0];
+        if(interfaceNode){
+            return 'interface'
+        }
+
+        const enumNode = tree.rootNode.descendantsOfType('enum_declaration')[0];
+        if(enumNode){
+            return 'enumeration'
+        }
+        
+        return 'class';
     }
 
     async getFields(tree: Tree | null): Promise<Property[]> {
