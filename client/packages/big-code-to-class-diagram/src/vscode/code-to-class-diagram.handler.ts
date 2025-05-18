@@ -90,7 +90,8 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         // Problem arises with the following (tree-sitter)
         const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'lib', 'tree-sitter-java.wasm');
-        const java = await treeSitter.Language.load(javaUri.path);
+        
+        const java = await treeSitter.Language.load(javaUri.fsPath);
         const parser = new treeSitter.Parser();
         parser.setLanguage(java);
         const parsed = parser.parse(`
