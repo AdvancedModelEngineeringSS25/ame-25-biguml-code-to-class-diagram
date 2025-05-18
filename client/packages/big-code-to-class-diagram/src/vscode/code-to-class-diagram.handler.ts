@@ -22,12 +22,15 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import type { Tree } from 'web-tree-sitter';
 import * as treeSitter from 'web-tree-sitter';
+
 import {
     GenerateDiagramRequestAction,
     GenerateDiagramResponseAction,
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
+import { Diagram } from '../common/intermediate-model.js';
+
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -44,6 +47,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     private readonly toDispose = new DisposableCollection();
     private path: string | null = null;
     private parser: treeSitter.Parser | null = null;
+    private diagram: Diagram = {edges: [], nodes: []}
 
     @postConstruct()
     protected init(): void {
@@ -94,20 +98,12 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         const java = await treeSitter.Language.load(javaUri.fsPath);
         const parser = new treeSitter.Parser();
         parser.setLanguage(java);
-        const parsed = parser.parse(`
-// Simple Java Hello World Program
-public class HelloWorld
-{
-    public static void main(String[] args)
-    {
-        System.out.println(“Hello, World”);
-    }
-}`);
-        console.log('Parsed tree: ', parsed?.rootNode.text);
+        this.parser = parser;
     }
 
     async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree | null>> {
         const fileMap = new Map<string, Tree | null>();
+        this.diagram.edges = []
 
         const readDirRecursive = async (currentPath: string | null) => {
             if (!currentPath) return;

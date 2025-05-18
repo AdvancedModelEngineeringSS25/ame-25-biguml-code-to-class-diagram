@@ -1,38 +1,42 @@
-type Diagram = {
+export type Diagram = {
     edges: Edge[];
     nodes: Node[];
 }
 
-type Edge = {
-    type: 'abstraction' | 'aggregation' // TODO add more
-    from: Node;
-    to: Node;
+
+export type Edge = {
+    type: 'abstraction' | 'aggregation' | 'association' | 'composition' | 'dependency' 
+    | 'element-import' | 'generalization' | 'interface-realization' | 'package-import' 
+    | 'package-merge' | 'realization' | 'substitution' | 'usage' 
+    fromId: number;
+    toId: number;
     multiplicity: string;
     label: string;
 }
 
-type Node = {
-    name: string; //unique or id?
+export type Node = {
+    name: string; 
+    id: number;
     type: 'abstract-class' | 'class' | 'data-type' | 'enumeration' | 'interface' | 'primitive-type' | 'package';
     properties: Property[];
     operations: Operation[];
     comment: string;
 }
 
-type Property = {
+export type Property = {
     name: string;
     type: string;
     accessModifier: '+' | '-' | '#' | '';
 };
 
-type Operation = {
+export type Operation = {
     name: string;
     type: string;
     accessModifier: '+' | '-' | '#' | '';
     attributes: Attribute[];
 };
 
-type Attribute = {
+export type Attribute = {
     name: string;
     type: string
 }
