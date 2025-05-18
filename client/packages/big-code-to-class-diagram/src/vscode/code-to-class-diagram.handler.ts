@@ -93,36 +93,19 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
                 // Create Edges
                 const typeToId = new Map<string, string>();
+                
                 for (const node of this.diagram.nodes) {
                     typeToId.set(node.name, node.id);
                 }
-                
-                // const edges = (
-                //     await Promise.all(
-                //         // Array.from(this.diagram.nodes).map(node => this.createEdge(node, typeToId))
-                //         Array.from(this.diagram.nodes).map(node => {
-                //             const tree = this.fileMap.get(node.name);
-                //             return tree ? this.createEdge(node, tree, typeToId) : Promise.resolve(null);
-                //         })
 
-                     
-                //     )
-                // ).filter((e): e is Edge => e !== null);
-                
-                // this.diagram.edges.push(...edges);
                 const edgesArrays = await Promise.all(
                     Array.from(this.diagram.nodes).map(node => {
-                        console.log("Here begin");
-                        console.log("node name: ", node.name);
-
                         const tree = this.fileMap.get(node.name);
-                        console.log("Tree: ", tree);
-                        console.log("Here end");
                         return tree ? this.createEdge(node, tree, typeToId) : Promise.resolve([]);
                     })
                 );
                 
-                const edges = edgesArrays.flat(); // flatten the nested arrays
+                const edges = edgesArrays.flat();
                 this.diagram.edges.push(...edges);
 
 
@@ -381,7 +364,18 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     multiplicity: '',
                     label: ''
                 });
-            } else {
+            } else if(property.accessModifier !== '-') {
+                edges.push({
+                    type: 'aggregation',
+                    fromId: source.id,
+                    toId: targetId,
+                    multiplicity: '',
+                    label: ''
+                });
+
+            }
+            
+            else {
                 edges.push({
                     type: 'association',
                     fromId: source.id,
