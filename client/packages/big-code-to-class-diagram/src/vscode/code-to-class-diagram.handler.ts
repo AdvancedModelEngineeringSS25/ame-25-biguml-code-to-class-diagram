@@ -29,7 +29,7 @@ import {
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
-import { Diagram } from '../common/intermediate-model.js';
+import { type Diagram } from '../common/intermediate-model.js';
 
 
 // Handle the action within the server and not the glsp client / server
