@@ -77,8 +77,11 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
+                // Create Nodes
                 this.diagram = {edges: [], nodes: []}
                 this.fileMap = await this.readJavaFilesAsMap(this.path);
+                console.log("Filemap: ", this.fileMap);
+
                 const nodes = await Promise.all(
                     Array.from(this.fileMap.entries()).map(async ([key, value]) => {
                         return this.createNode(key, value);
@@ -88,21 +91,39 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 // Assign after all async work is done
                 this.diagram.nodes.push(...nodes);
 
-                // Begin
+                // Create Edges
                 const typeToId = new Map<string, string>();
                 for (const node of this.diagram.nodes) {
                     typeToId.set(node.name, node.id);
                 }
                 
-                const edges = (
-                    await Promise.all(
-                        Array.from(this.diagram.nodes).map(node => this.createEdge(node, typeToId))
-                    )
-                ).filter((e): e is Edge => e !== null);
+                // const edges = (
+                //     await Promise.all(
+                //         // Array.from(this.diagram.nodes).map(node => this.createEdge(node, typeToId))
+                //         Array.from(this.diagram.nodes).map(node => {
+                //             const tree = this.fileMap.get(node.name);
+                //             return tree ? this.createEdge(node, tree, typeToId) : Promise.resolve(null);
+                //         })
+
+                     
+                //     )
+                // ).filter((e): e is Edge => e !== null);
                 
+                // this.diagram.edges.push(...edges);
+                const edgesArrays = await Promise.all(
+                    Array.from(this.diagram.nodes).map(node => {
+                        console.log("Here begin");
+                        console.log("node name: ", node.name);
+
+                        const tree = this.fileMap.get(node.name);
+                        console.log("Tree: ", tree);
+                        console.log("Here end");
+                        return tree ? this.createEdge(node, tree, typeToId) : Promise.resolve([]);
+                    })
+                );
+                
+                const edges = edgesArrays.flat(); // flatten the nested arrays
                 this.diagram.edges.push(...edges);
-                                
-                // End
 
 
                 console.log(this.diagram);
@@ -191,6 +212,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     async getNodeType(tree: Tree): Promise<DiagramNode['type']>  {
 
         const classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
+
         if (classNode){
             const modifiersNode = classNode.descendantsOfType('modifiers'); 
             if (modifiersNode){
@@ -339,23 +361,64 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return identifierNode?.text ?? crypto.randomUUID();
     }
 
-    async createEdge(source: DiagramNode, typeToId: Map<string, string>): Promise<Edge | null> {
+    async createEdge(source: DiagramNode, sourceTree: Tree, typeToId: Map<string, string>): Promise<Edge[]> {
         // TODO extend to other edge types
 
-        for (const prop of source.properties) {
-            const toId = typeToId.get(prop.type);
-            if (toId && toId !== source.id) {
-                return {
-                    type: 'association',
+        const edges: Edge[] = [];
+
+        for (const property of source.properties) {
+            const targetId = typeToId.get(property.type);
+
+            if (!targetId || targetId === source.id)
+                continue;
+
+            // Check for composition
+            if(property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
+                edges.push({
+                    type: 'composition',
                     fromId: source.id,
-                    toId,
+                    toId: targetId,
                     multiplicity: '',
                     label: ''
-                };
+                });
+            } else {
+                edges.push({
+                    type: 'association',
+                    fromId: source.id,
+                    toId: targetId,
+                    multiplicity: '',
+                    label: ''
+                });
+            }
+        }
+
+        // Check for generalization
+        const classNode = sourceTree.rootNode.descendantsOfType('class_declaration')[0];
+        const superclassNode = classNode?.descendantsOfType('superclass')[0];
+        const typeIdentifier = superclassNode?.descendantsOfType('type_identifier')[0];
+        const superClassName = typeIdentifier?.text;
+    
+        if (superClassName) {
+            const targetId = typeToId.get(superClassName);
+
+            if (targetId && targetId !== source.id) {
+                edges.push({
+                    type: 'generalization',
+                    fromId: source.id,
+                    toId: targetId,
+                    multiplicity: '',
+                    label: ''
+                });
             }
         }
     
-        return null;
+        return edges;
+    }
+
+    private isExposedInMethods(node: DiagramNode, fieldName: string): boolean {
+        return node.operations.some(op =>
+            op.attributes.some(attribute => attribute.name === fieldName)
+        );
     }
     
 }
