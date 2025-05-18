@@ -80,7 +80,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 this.fileMap = await this.readJavaFilesAsMap(this.path);
                 const nodes = await Promise.all(
                     Array.from(this.fileMap.entries()).map(async ([key, value]) => {
-                        return this.createClass(key, value);
+                        return this.createNode(key, value);
                     })
                 );
 
@@ -156,7 +156,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return count;
     }
 
-    async createClass(name: string, tree: Tree | null): Promise<DiagramNode> {
+    async createNode(name: string, tree: Tree | null): Promise<DiagramNode> {
 
 
         const c : DiagramNode = {
