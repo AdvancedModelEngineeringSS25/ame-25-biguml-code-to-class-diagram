@@ -156,15 +156,15 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return count;
     }
 
-    async createClass(classname: string, tree: Tree | null): Promise<DiagramNode> {
+    async createClass(name: string, tree: Tree | null): Promise<DiagramNode> {
 
 
         const c : DiagramNode = {
-            name: classname,
-            type: 'abstract-class',
+            name: name,
+            type: 'abstract-class', //TODO
             properties: await this.getFields(tree),
             operations: await this.getMethods(tree),
-            comment: ''
+            comment: '' //TODO
         }
 
         return c;
