@@ -163,10 +163,11 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         const c : DiagramNode = {
             name: name,
             type: await this.getNodeType(tree), 
-            properties: await this.getFields(tree), // TODO map enum constants as properties
+            properties: await this.getProperties(tree), // TODO map enum constants as properties
             operations: await this.getMethods(tree),
             comment: '' //TODO
         }
+        await fs.writeFile('./output/diagram-node.json', JSON.stringify(c, null, 2), 'utf-8');
 
         return c;
     }
@@ -200,46 +201,60 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return 'class';
     }
 
-    async getFields(tree: Tree | null): Promise<Property[]> {
+    async getProperties(tree: Tree | null): Promise<Property[]> {
         if (!tree) return [];
-        const fields: Property[] = [];
+        const properties: Property[] = [];
 
-        const classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
-        if (!classNode) return [];
+        const interfaceNode = tree.rootNode.descendantsOfType('interface_declaration')[0];
+        let classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
+        if(interfaceNode){
+            classNode = interfaceNode;
+        }
+        
+        if (classNode){
+            const fieldNodes = classNode.descendantsOfType('field_declaration');
+            for (const fieldNode of fieldNodes) {
+                if(!fieldNode) continue;
+                const modifiersNode = fieldNode.descendantsOfType('modifiers');
+                const typeNode = fieldNode.childForFieldName('type');
+                const varDeclarator = fieldNode.descendantsOfType('variable_declarator')[0];
+                const nameNode = varDeclarator?.childForFieldName('name');
 
-        const fieldNodes = classNode.descendantsOfType('field_declaration');
+                let accessModifier: Property['accessModifier'] = '';
 
-        for (const fieldNode of fieldNodes) {
-            if(!fieldNode) continue;
-            const modifiersNode = fieldNode.descendantsOfType('modifiers');
-            const typeNode = fieldNode.childForFieldName('type');
-            const varDeclarator = fieldNode.descendantsOfType('variable_declarator')[0];
-            const nameNode = varDeclarator?.childForFieldName('name');
+                if (!modifiersNode) continue
+                for(const modifier of modifiersNode){
+                    const modifierTexts = modifier?.text
+                    if (modifierTexts?.includes('public')) {
+                        accessModifier = '+';
+                    } else if (modifierTexts?.includes('private')) {
+                        accessModifier = '-';
+                    } else if (modifierTexts?.includes('protected')) {
+                        accessModifier = '#';
+                    }
+                }
 
-            let accessModifier: Property['accessModifier'] = '';
-
-            if (!modifiersNode) continue
-            for(const modifier of modifiersNode){
-                const modifierTexts = modifier?.text
-                if (modifierTexts?.includes('public')) {
-                    accessModifier = '+';
-                } else if (modifierTexts?.includes('private')) {
-                    accessModifier = '-';
-                } else if (modifierTexts?.includes('protected')) {
-                    accessModifier = '#';
+                if (nameNode && typeNode) {
+                    properties.push({
+                        name: nameNode.text,
+                        type: typeNode.text,
+                        accessModifier,
+                    });
                 }
             }
 
-            if (nameNode && typeNode) {
-                fields.push({
-                    name: nameNode.text,
-                    type: typeNode.text,
-                    accessModifier,
-                });
-            }
+            return properties; 
+        } 
+
+        
+
+        const enumNode = tree.rootNode.descendantsOfType('enum_declaration')[0];
+        if(enumNode){
+            enumNode.descendantsOfType('enum_body');
+            return properties;
         }
 
-        return fields;
+        return properties;
     }
 
     async getMethods(tree: Tree | null): Promise<Operation[]> {
