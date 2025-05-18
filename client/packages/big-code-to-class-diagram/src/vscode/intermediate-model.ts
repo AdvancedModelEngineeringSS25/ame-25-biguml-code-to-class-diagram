@@ -30,6 +30,7 @@ export type Node = {
     type: 'abstract-class' | 'class' | 'data-type' | 'enumeration' | 'interface' | 'primitive-type' | 'package';
     properties: Property[];
     operations: Operation[];
+    enumerationLiterals: string[];
     comment: string;
 }
 

@@ -80,7 +80,6 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 // Create Nodes
                 this.diagram = {edges: [], nodes: []}
                 this.fileMap = await this.readJavaFilesAsMap(this.path);
-                console.log("Filemap: ", this.fileMap);
 
                 const nodes = await Promise.all(
                     Array.from(this.fileMap.entries()).map(async ([key, value]) => {
@@ -110,6 +109,8 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
 
                 console.log(this.diagram);
+                
+                await fs.writeFile('diagram-node.json', JSON.stringify(this.diagram, null, 2), 'utf-8');
                 
                 return GenerateDiagramResponseAction.create();
             })
@@ -186,9 +187,9 @@ export class CodeToClassDiagramActionHandler implements Disposable {
             type: await this.getNodeType(tree), 
             properties: await this.getProperties(tree), // TODO map enum constants as properties
             operations: await this.getMethods(tree),
+            enumerationLiterals: await this.getEnumLiterals(tree),
             comment: '' //TODO
         }
-        await fs.writeFile('./output/diagram-node.json', JSON.stringify(c, null, 2), 'utf-8');
 
         return c;
     }
@@ -221,6 +222,27 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         }
         
         return 'class';
+    }
+
+    async getEnumLiterals(tree: Tree | null): Promise<string[]> {
+        if (!tree) return [];
+        const enumLiterals: string[] = [];
+        const enumNode = tree.rootNode.descendantsOfType('enum_declaration')[0];
+        if(enumNode){
+            const bodies = enumNode.descendantsOfType('enum_body');
+            for(const body of bodies) {
+                if(!body) continue;
+                const enumConstants = body.descendantsOfType('enum_constant');
+                for(const enumConstant of enumConstants) {
+                    if(!enumConstant) continue;
+                    const constantName = enumConstant.childForFieldName('name')
+                    if(constantName){
+                        enumLiterals.push(constantName.text)
+                    }
+                }
+            }
+        }
+        return enumLiterals;
     }
 
     async getProperties(tree: Tree | null): Promise<Property[]> {
@@ -264,17 +286,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     });
                 }
             }
-
-            return properties; 
         } 
-
-        
-
-        const enumNode = tree.rootNode.descendantsOfType('enum_declaration')[0];
-        if(enumNode){
-            enumNode.descendantsOfType('enum_body');
-            return properties;
-        }
 
         return properties;
     }
