@@ -29,7 +29,7 @@ import {
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
-import { type Diagram } from '../common/intermediate-model.js';
+import { type Diagram, type Node as DiagramNode, type Operation, type Property } from './intermediate-model.js';
 
 
 // Handle the action within the server and not the glsp client / server
@@ -47,6 +47,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     private readonly toDispose = new DisposableCollection();
     private path: string | null = null;
     private parser: treeSitter.Parser | null = null;
+    private fileMap = new Map<string, Tree | null>();
     private diagram: Diagram = {edges: [], nodes: []}
 
     @postConstruct()
@@ -64,7 +65,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 console.log('Selected folder:', folderPath);
                 this.path = folderPath;
 
-                const javaFileCount = await countNumberOfJavaFiles(folderPath);
+                const javaFileCount = await this.countNumberOfJavaFiles(folderPath);
                 console.log(`Found ${javaFileCount} .java files in ${folderPath}`);
 
                 return SelectedFolderResponseAction.create({
@@ -76,10 +77,18 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
-                console.log('GenerateDiagramRequestAction');
-                const file = await this.readJavaFilesAsMap(this.path);
+                this.fileMap = await this.readJavaFilesAsMap(this.path);
+                const nodes = await Promise.all(
+                    Array.from(this.fileMap.entries()).map(async ([key, value]) => {
+                        return this.createClass(key, value);
+                    })
+                );
 
-                console.log('READ FILE CONTENT ', file.get('NoMapping'));
+                // Assign after all async work is done
+                this.diagram.nodes.push(...nodes);
+
+                console.log(this.diagram);
+                
                 return GenerateDiagramResponseAction.create();
             })
         );
@@ -102,7 +111,6 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
     async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree | null>> {
-        const fileMap = new Map<string, Tree | null>();
         this.diagram.edges = []
 
         const readDirRecursive = async (currentPath: string | null) => {
@@ -118,7 +126,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                         const content = await fs.readFile(fullPath, 'utf-8');
                         const parsedContent = this.parser?.parse(content);
                         if (parsedContent) {
-                            fileMap.set(entry.name.replace(/\.java$/, ''), parsedContent);
+                            this.fileMap.set(entry.name.replace(/\.java$/, ''), parsedContent);
                         }
                     } catch (err) {
                         console.error(`Failed to read file ${fullPath}:`, err);
@@ -128,23 +136,140 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         };
 
         await readDirRecursive(dirPath);
-        return fileMap;
+        return this.fileMap;
     }
-}
 
-async function countNumberOfJavaFiles(dirPath: string | null): Promise<number> {
-    let count = 0;
-    if (!dirPath) return 0;
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    async countNumberOfJavaFiles(dirPath: string | null): Promise<number> {
+        let count = 0;
+        if (!dirPath) return 0;
+        const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
-    for (const entry of entries) {
-        const fullPath = path.join(dirPath, entry.name);
-        if (entry.isDirectory()) {
-            count += await countNumberOfJavaFiles(fullPath); // Recurse
-        } else if (entry.isFile() && entry.name.endsWith('.java')) {
-            count++;
+        for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            if (entry.isDirectory()) {
+                count += await this.countNumberOfJavaFiles(fullPath); // Recurse
+            } else if (entry.isFile() && entry.name.endsWith('.java')) {
+                count++;
+            }
         }
+
+        return count;
     }
 
-    return count;
+    async createClass(classname: string, tree: Tree | null): Promise<DiagramNode> {
+
+
+        const c : DiagramNode = {
+            name: classname,
+            type: 'abstract-class',
+            properties: await this.getFields(tree),
+            operations: await this.getMethods(tree),
+            comment: ''
+        }
+
+        return c;
+    }
+
+    async getFields(tree: Tree | null): Promise<Property[]> {
+        if (!tree) return [];
+        const fields: Property[] = [];
+
+        const classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
+        if (!classNode) return [];
+
+        const fieldNodes = classNode.descendantsOfType('field_declaration');
+
+        for (const fieldNode of fieldNodes) {
+            if(!fieldNode) continue;
+            const modifiersNode = fieldNode.descendantsOfType('modifiers');
+            const typeNode = fieldNode.childForFieldName('type');
+            const varDeclarator = fieldNode.descendantsOfType('variable_declarator')[0];
+            const nameNode = varDeclarator?.childForFieldName('name');
+
+            let accessModifier: Property['accessModifier'] = '';
+
+            if (!modifiersNode) continue
+            for(const modifier of modifiersNode){
+                const modifierTexts = modifier?.text
+                if (modifierTexts?.includes('public')) {
+                    accessModifier = '+';
+                } else if (modifierTexts?.includes('private')) {
+                    accessModifier = '-';
+                } else if (modifierTexts?.includes('protected')) {
+                    accessModifier = '#';
+                }
+            }
+
+            if (nameNode && typeNode) {
+                fields.push({
+                    name: nameNode.text,
+                    type: typeNode.text,
+                    accessModifier,
+                });
+            }
+        }
+
+        return fields;
+    }
+
+    async getMethods(tree: Tree | null): Promise<Operation[]> {
+        if(!tree) return [];
+        const methods: Operation[] = [];
+        const rootNode = tree.rootNode;
+
+        const methodNodes = rootNode.descendantsOfType('method_declaration');
+
+        for (const methodNode of methodNodes) {
+            if(!methodNode) continue;
+
+            const nameNode = methodNode.childForFieldName('name');
+            const modifiersNode = methodNode.descendantsOfType('modifiers');
+            const typeNode = methodNode.childForFieldName('type');
+            const paramsNode = methodNode.childForFieldName('parameters');
+            let accessModifier: Operation['accessModifier'] = ''; // fallback
+
+            if (!modifiersNode) continue
+            for(const modifier of modifiersNode){
+                const modifierTexts = modifier?.text
+                if (modifierTexts?.includes('public')) {
+                    accessModifier = '+';
+                } else if (modifierTexts?.includes('private')) {
+                    accessModifier = '-';
+                } else if (modifierTexts?.includes('protected')) {
+                    accessModifier = '#';
+                }
+            }
+
+            const parameters: { name: string; type: string }[] = [];
+
+            if (paramsNode) {
+                const paramNodes = paramsNode.namedChildren.filter(n => n?.type === 'formal_parameter');
+
+                for (const param of paramNodes) {
+                    if(!param) continue;
+                    const typeNode = param.childForFieldName('type');
+                    const nameNode = param.childForFieldName('name');
+                    if (typeNode && nameNode) {
+                        parameters.push({
+                            type: typeNode.text,
+                            name: nameNode.text,
+                        });
+                    }
+                }
+            }
+
+            if (nameNode && typeNode) {
+                methods.push({
+                    name: nameNode.text,
+                    accessModifier,
+                    type: typeNode.text,
+                    attributes: parameters
+                });
+            }
+        }
+
+        return methods;
+    }
+
 }
+
