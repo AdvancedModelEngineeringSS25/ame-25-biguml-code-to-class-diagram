@@ -29,7 +29,7 @@ import {
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
-import { type Diagram, type Node as DiagramNode, type Operation, type Property } from './intermediate-model.js';
+import { type Diagram, type Node as DiagramNode, type Edge, type Operation, type Property } from './intermediate-model.js';
 
 
 // Handle the action within the server and not the glsp client / server
@@ -87,6 +87,23 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
                 // Assign after all async work is done
                 this.diagram.nodes.push(...nodes);
+
+                // Begin
+                const typeToId = new Map<string, string>();
+                for (const node of this.diagram.nodes) {
+                    typeToId.set(node.name, node.id);
+                }
+                
+                const edges = (
+                    await Promise.all(
+                        Array.from(this.diagram.nodes).map(node => this.createEdge(node, typeToId))
+                    )
+                ).filter((e): e is Edge => e !== null);
+                
+                this.diagram.edges.push(...edges);
+                                
+                // End
+
 
                 console.log(this.diagram);
                 
@@ -159,9 +176,9 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     async createNode(name: string, tree: Tree): Promise<DiagramNode> {
 
-
         const c : DiagramNode = {
             name: name,
+            id: await this.createNodeId(name, tree),
             type: await this.getNodeType(tree), 
             properties: await this.getFields(tree), // TODO map enum constants as properties
             operations: await this.getMethods(tree),
@@ -301,5 +318,45 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return methods;
     }
 
+    async createNodeId(className: string, tree: Tree | null): Promise<string> {
+        const packageName = await this.getPackageName(tree);
+
+        return packageName + '.' + className;
+    }
+
+    async getPackageName(tree: Tree | null): Promise<string> {
+        // TODO error handling?
+        if (!tree)
+            return crypto.randomUUID.toString();
+
+        const packageNode = tree.rootNode.descendantsOfType('package_declaration')[0];
+
+        if (!packageNode) 
+            return crypto.randomUUID.toString();
+    
+        const identifierNode = packageNode.descendantsOfType('scoped_identifier')[0];
+        console.log("Package name:", identifierNode?.text ?? crypto.randomUUID());
+        return identifierNode?.text ?? crypto.randomUUID();
+    }
+
+    async createEdge(source: DiagramNode, typeToId: Map<string, string>): Promise<Edge | null> {
+        // TODO extend to other edge types
+
+        for (const prop of source.properties) {
+            const toId = typeToId.get(prop.type);
+            if (toId && toId !== source.id) {
+                return {
+                    type: 'association',
+                    fromId: source.id,
+                    toId,
+                    multiplicity: '',
+                    label: ''
+                };
+            }
+        }
+    
+        return null;
+    }
+    
 }
 

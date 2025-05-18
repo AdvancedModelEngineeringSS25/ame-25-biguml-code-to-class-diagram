@@ -18,13 +18,14 @@ export type Edge = {
     type: 'abstraction' | 'aggregation' | 'association' | 'composition' | 'dependency' 
     | 'element-import' | 'generalization' | 'interface-realization' | 'package-import' 
     | 'package-merge' | 'realization' | 'substitution' | 'usage' 
-    fromId: number;
-    toId: number;
+    fromId: string;
+    toId: string;
     multiplicity: string;
     label: string;
 }
 
 export type Node = {
+    id: string;
     name: string; 
     type: 'abstract-class' | 'class' | 'data-type' | 'enumeration' | 'interface' | 'primitive-type' | 'package';
     properties: Property[];
