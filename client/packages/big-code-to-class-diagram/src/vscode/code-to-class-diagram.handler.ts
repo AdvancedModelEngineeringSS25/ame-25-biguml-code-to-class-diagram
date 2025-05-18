@@ -29,7 +29,7 @@ import {
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
-import { type Diagram, type Node as DiagramNode, type Operation, type Property } from './intermediate-model.js';
+import { type Diagram, type Node as DiagramNode, type Edge, type Operation, type Property } from './intermediate-model.js';
 
 
 // Handle the action within the server and not the glsp client / server
@@ -77,8 +77,11 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
+                // Create Nodes
                 this.diagram = {edges: [], nodes: []}
                 this.fileMap = await this.readJavaFilesAsMap(this.path);
+                console.log("Filemap: ", this.fileMap);
+
                 const nodes = await Promise.all(
                     Array.from(this.fileMap.entries()).map(async ([key, value]) => {
                         return this.createNode(key, value);
@@ -87,6 +90,24 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
                 // Assign after all async work is done
                 this.diagram.nodes.push(...nodes);
+
+                // Create Edges
+                const typeToId = new Map<string, string>();
+                
+                for (const node of this.diagram.nodes) {
+                    typeToId.set(node.name, node.id);
+                }
+
+                const edgesArrays = await Promise.all(
+                    Array.from(this.diagram.nodes).map(node => {
+                        const tree = this.fileMap.get(node.name);
+                        return tree ? this.createEdge(node, tree, typeToId) : Promise.resolve([]);
+                    })
+                );
+                
+                const edges = edgesArrays.flat();
+                this.diagram.edges.push(...edges);
+
 
                 console.log(this.diagram);
                 
@@ -159,9 +180,9 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     async createNode(name: string, tree: Tree): Promise<DiagramNode> {
 
-
         const c : DiagramNode = {
             name: name,
+            id: await this.createNodeId(name, tree),
             type: await this.getNodeType(tree), 
             properties: await this.getProperties(tree), // TODO map enum constants as properties
             operations: await this.getMethods(tree),
@@ -175,6 +196,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     async getNodeType(tree: Tree): Promise<DiagramNode['type']>  {
 
         const classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
+
         if (classNode){
             const modifiersNode = classNode.descendantsOfType('modifiers'); 
             if (modifiersNode){
@@ -316,5 +338,97 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return methods;
     }
 
+    async createNodeId(className: string, tree: Tree | null): Promise<string> {
+        const packageName = await this.getPackageName(tree);
+
+        return packageName + '.' + className;
+    }
+
+    async getPackageName(tree: Tree | null): Promise<string> {
+        // TODO error handling?
+        if (!tree)
+            return crypto.randomUUID.toString();
+
+        const packageNode = tree.rootNode.descendantsOfType('package_declaration')[0];
+
+        if (!packageNode) 
+            return crypto.randomUUID.toString();
+    
+        const identifierNode = packageNode.descendantsOfType('scoped_identifier')[0];
+        console.log("Package name:", identifierNode?.text ?? crypto.randomUUID());
+        return identifierNode?.text ?? crypto.randomUUID();
+    }
+
+    async createEdge(source: DiagramNode, sourceTree: Tree, typeToId: Map<string, string>): Promise<Edge[]> {
+        // TODO extend to other edge types
+
+        const edges: Edge[] = [];
+
+        for (const property of source.properties) {
+            const targetId = typeToId.get(property.type);
+
+            if (!targetId || targetId === source.id)
+                continue;
+
+            // Check for composition
+            if(property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
+                edges.push({
+                    type: 'composition',
+                    fromId: source.id,
+                    toId: targetId,
+                    multiplicity: '',
+                    label: ''
+                });
+            } else if(property.accessModifier !== '-') {
+                edges.push({
+                    type: 'aggregation',
+                    fromId: source.id,
+                    toId: targetId,
+                    multiplicity: '',
+                    label: ''
+                });
+
+            }
+            
+            else {
+                edges.push({
+                    type: 'association',
+                    fromId: source.id,
+                    toId: targetId,
+                    multiplicity: '',
+                    label: ''
+                });
+            }
+        }
+
+        // Check for generalization
+        const classNode = sourceTree.rootNode.descendantsOfType('class_declaration')[0];
+        const superclassNode = classNode?.descendantsOfType('superclass')[0];
+        const typeIdentifier = superclassNode?.descendantsOfType('type_identifier')[0];
+        const superClassName = typeIdentifier?.text;
+    
+        if (superClassName) {
+            const targetId = typeToId.get(superClassName);
+
+            if (targetId && targetId !== source.id) {
+                edges.push({
+                    type: 'generalization',
+                    fromId: source.id,
+                    toId: targetId,
+                    multiplicity: '',
+                    label: ''
+                });
+            }
+        }
+    
+        return edges;
+    }
+
+    private isExposedInMethods(node: DiagramNode, fieldName: string): boolean {
+        return node.operations.some(op =>
+            op.attributes.some(attribute => attribute.name === fieldName)
+        );
+    }
+    
 }
 
