@@ -162,8 +162,8 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         const c : DiagramNode = {
             name: name,
-            type: await this.getNodeType(tree), //TODO
-            properties: await this.getFields(tree),
+            type: await this.getNodeType(tree), 
+            properties: await this.getFields(tree), // TODO map enum constants as properties
             operations: await this.getMethods(tree),
             comment: '' //TODO
         }
