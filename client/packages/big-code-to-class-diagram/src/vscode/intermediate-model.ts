@@ -7,32 +7,42 @@
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
 
-
 export type Diagram = {
     edges: Edge[];
     nodes: Node[];
-}
-
+};
 
 export type Edge = {
-    type: 'abstraction' | 'aggregation' | 'association' | 'composition' | 'dependency' 
-    | 'element-import' | 'generalization' | 'interface-realization' | 'package-import' 
-    | 'package-merge' | 'realization' | 'substitution' | 'usage' 
+    type:
+        | 'Abstraction'
+        | 'Aggregation'
+        | 'Association'
+        | 'Composition'
+        | 'Dependency'
+        | 'ElementImport'
+        | 'Generalization'
+        | 'InterfaceRealization'
+        | 'PackageImport'
+        | 'PackageMerge'
+        | 'Realization'
+        | 'Substitution'
+        | 'Usage';
     fromId: string;
     toId: string;
     multiplicity: string;
     label: string;
-}
+};
 
 export type Node = {
     id: string;
-    name: string; 
-    type: 'abstract-class' | 'class' | 'data-type' | 'enumeration' | 'interface' | 'primitive-type' | 'package';
+    name: string;
+    // see server/app/src/main/java/com/borkdominik/big/glsp/uml/uml/UMLTypes.java
+    type: 'AbstractClass' | 'Class' | 'DataType' | 'Enumeration' | 'Interface' | 'PrimitiveType' | 'Package';
     properties: Property[];
     operations: Operation[];
     enumerationLiterals: string[];
     comment: string;
-}
+};
 
 export type Property = {
     name: string;
@@ -49,5 +59,5 @@ export type Operation = {
 
 export type Attribute = {
     name: string;
-    type: string
-}
+    type: string;
+};

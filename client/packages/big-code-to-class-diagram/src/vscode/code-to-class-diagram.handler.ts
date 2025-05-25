@@ -31,7 +31,6 @@ import {
 } from '../common/code-to-class-diagram.action.js';
 import { type Diagram, type Node as DiagramNode, type Edge, type Operation, type Property } from './intermediate-model.js';
 
-
 // Handle the action within the server and not the glsp client / server
 @injectable()
 export class CodeToClassDiagramActionHandler implements Disposable {
@@ -48,7 +47,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     private path: string | null = null;
     private parser: treeSitter.Parser | null = null;
     private fileMap = new Map<string, Tree>();
-    private diagram: Diagram = {edges: [], nodes: []}
+    private diagram: Diagram = { edges: [], nodes: [] };
 
     @postConstruct()
     protected init(): void {
@@ -78,7 +77,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
                 // Create Nodes
-                this.diagram = {edges: [], nodes: []}
+                this.diagram = { edges: [], nodes: [] };
                 this.fileMap = await this.readJavaFilesAsMap(this.path);
 
                 const nodes = await Promise.all(
@@ -92,7 +91,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
                 // Create Edges
                 const typeToId = new Map<string, string>();
-                
+
                 for (const node of this.diagram.nodes) {
                     typeToId.set(node.name, node.id);
                 }
@@ -103,15 +102,14 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                         return tree ? this.createEdge(node, tree, typeToId) : Promise.resolve([]);
                     })
                 );
-                
+
                 const edges = edgesArrays.flat();
                 this.diagram.edges.push(...edges);
 
-
                 console.log(this.diagram);
-                
+
                 await fs.writeFile('diagram-node.json', JSON.stringify(this.diagram, null, 2), 'utf-8');
-                
+
                 return GenerateDiagramResponseAction.create();
             })
         );
@@ -126,7 +124,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         // Problem arises with the following (tree-sitter)
         const javaUri = vscode.Uri.joinPath(this.extensionContext.extensionUri, 'lib', 'tree-sitter-java.wasm');
-        
+
         const java = await treeSitter.Language.load(javaUri.fsPath);
         const parser = new treeSitter.Parser();
         parser.setLanguage(java);
@@ -134,7 +132,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
     async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree>> {
-        this.diagram.edges = []
+        this.diagram.edges = [];
 
         const readDirRecursive = async (currentPath: string | null) => {
             if (!currentPath) return;
@@ -180,64 +178,62 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
     async createNode(name: string, tree: Tree): Promise<DiagramNode> {
-
-        const c : DiagramNode = {
+        const c: DiagramNode = {
             name: name,
             id: await this.createNodeId(name, tree),
-            type: await this.getNodeType(tree), 
+            type: await this.getNodeType(tree),
             properties: await this.getProperties(tree), // TODO map enum constants as properties
             operations: await this.getMethods(tree),
             enumerationLiterals: await this.getEnumLiterals(tree),
             comment: '' //TODO
-        }
+        };
 
         return c;
     }
 
-    async getNodeType(tree: Tree): Promise<DiagramNode['type']>  {
-
+    async getNodeType(tree: Tree): Promise<DiagramNode['type']> {
         const classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
 
-        if (classNode){
-            const modifiersNode = classNode.descendantsOfType('modifiers'); 
-            if (modifiersNode){
-                for(const modifier of modifiersNode){
-                    const modifierTexts = modifier?.text
+        if (classNode) {
+            const modifiersNode = classNode.descendantsOfType('modifiers');
+            if (modifiersNode) {
+                for (const modifier of modifiersNode) {
+                    const modifierTexts = modifier?.text;
                     if (modifierTexts?.includes('abstract')) {
-                        return 'abstract-class'
-                    } 
-                }  
+                        return 'AbstractClass';
+                    }
+                }
             }
-            return 'class'
-        } 
+            return 'Class';
+        }
 
         const interfaceNode = tree.rootNode.descendantsOfType('interface_declaration')[0];
-        if(interfaceNode){
-            return 'interface'
+        if (interfaceNode) {
+            return 'Interface';
         }
 
         const enumNode = tree.rootNode.descendantsOfType('enum_declaration')[0];
-        if(enumNode){
-            return 'enumeration'
+        if (enumNode) {
+            return 'Enumeration';
         }
-        
-        return 'class';
+
+        return 'Class';
     }
 
     async getEnumLiterals(tree: Tree | null): Promise<string[]> {
         if (!tree) return [];
         const enumLiterals: string[] = [];
         const enumNode = tree.rootNode.descendantsOfType('enum_declaration')[0];
-        if(enumNode){
+        if (enumNode) {
             const bodies = enumNode.descendantsOfType('enum_body');
-            for(const body of bodies) {
-                if(!body) continue;
+            for (const body of bodies) {
+                if (!body) continue;
                 const enumConstants = body.descendantsOfType('enum_constant');
-                for(const enumConstant of enumConstants) {
-                    if(!enumConstant) continue;
-                    const constantName = enumConstant.childForFieldName('name')
-                    if(constantName){
-                        enumLiterals.push(constantName.text)
+                for (const enumConstant of enumConstants) {
+                    if (!enumConstant) continue;
+                    const constantName = enumConstant.childForFieldName('name');
+                    if (constantName) {
+                        enumLiterals.push(constantName.text);
                     }
                 }
             }
@@ -251,14 +247,14 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         const interfaceNode = tree.rootNode.descendantsOfType('interface_declaration')[0];
         let classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
-        if(interfaceNode){
+        if (interfaceNode) {
             classNode = interfaceNode;
         }
-        
-        if (classNode){
+
+        if (classNode) {
             const fieldNodes = classNode.descendantsOfType('field_declaration');
             for (const fieldNode of fieldNodes) {
-                if(!fieldNode) continue;
+                if (!fieldNode) continue;
                 const modifiersNode = fieldNode.descendantsOfType('modifiers');
                 const typeNode = fieldNode.childForFieldName('type');
                 const varDeclarator = fieldNode.descendantsOfType('variable_declarator')[0];
@@ -266,9 +262,9 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
                 let accessModifier: Property['accessModifier'] = '';
 
-                if (!modifiersNode) continue
-                for(const modifier of modifiersNode){
-                    const modifierTexts = modifier?.text
+                if (!modifiersNode) continue;
+                for (const modifier of modifiersNode) {
+                    const modifierTexts = modifier?.text;
                     if (modifierTexts?.includes('public')) {
                         accessModifier = '+';
                     } else if (modifierTexts?.includes('private')) {
@@ -282,24 +278,24 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     properties.push({
                         name: nameNode.text,
                         type: typeNode.text,
-                        accessModifier,
+                        accessModifier
                     });
                 }
             }
-        } 
+        }
 
         return properties;
     }
 
     async getMethods(tree: Tree | null): Promise<Operation[]> {
-        if(!tree) return [];
+        if (!tree) return [];
         const methods: Operation[] = [];
         const rootNode = tree.rootNode;
 
         const methodNodes = rootNode.descendantsOfType('method_declaration');
 
         for (const methodNode of methodNodes) {
-            if(!methodNode) continue;
+            if (!methodNode) continue;
 
             const nameNode = methodNode.childForFieldName('name');
             const modifiersNode = methodNode.descendantsOfType('modifiers');
@@ -307,9 +303,9 @@ export class CodeToClassDiagramActionHandler implements Disposable {
             const paramsNode = methodNode.childForFieldName('parameters');
             let accessModifier: Operation['accessModifier'] = ''; // fallback
 
-            if (!modifiersNode) continue
-            for(const modifier of modifiersNode){
-                const modifierTexts = modifier?.text
+            if (!modifiersNode) continue;
+            for (const modifier of modifiersNode) {
+                const modifierTexts = modifier?.text;
                 if (modifierTexts?.includes('public')) {
                     accessModifier = '+';
                 } else if (modifierTexts?.includes('private')) {
@@ -325,13 +321,13 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 const paramNodes = paramsNode.namedChildren.filter(n => n?.type === 'formal_parameter');
 
                 for (const param of paramNodes) {
-                    if(!param) continue;
+                    if (!param) continue;
                     const typeNode = param.childForFieldName('type');
                     const nameNode = param.childForFieldName('name');
                     if (typeNode && nameNode) {
                         parameters.push({
                             type: typeNode.text,
-                            name: nameNode.text,
+                            name: nameNode.text
                         });
                     }
                 }
@@ -358,16 +354,14 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     async getPackageName(tree: Tree | null): Promise<string> {
         // TODO error handling?
-        if (!tree)
-            return crypto.randomUUID.toString();
+        if (!tree) return crypto.randomUUID.toString();
 
         const packageNode = tree.rootNode.descendantsOfType('package_declaration')[0];
 
-        if (!packageNode) 
-            return crypto.randomUUID.toString();
-    
+        if (!packageNode) return crypto.randomUUID.toString();
+
         const identifierNode = packageNode.descendantsOfType('scoped_identifier')[0];
-        console.log("Package name:", identifierNode?.text ?? crypto.randomUUID());
+        console.log('Package name:', identifierNode?.text ?? crypto.randomUUID());
         return identifierNode?.text ?? crypto.randomUUID();
     }
 
@@ -379,32 +373,28 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         for (const property of source.properties) {
             const targetId = typeToId.get(property.type);
 
-            if (!targetId || targetId === source.id)
-                continue;
+            if (!targetId || targetId === source.id) continue;
 
             // Check for composition
-            if(property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
+            if (property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
                 edges.push({
-                    type: 'composition',
+                    type: 'Composition',
                     fromId: source.id,
                     toId: targetId,
                     multiplicity: '',
                     label: ''
                 });
-            } else if(property.accessModifier !== '-') {
+            } else if (property.accessModifier !== '-') {
                 edges.push({
-                    type: 'aggregation',
+                    type: 'Aggregation',
                     fromId: source.id,
                     toId: targetId,
                     multiplicity: '',
                     label: ''
                 });
-
-            }
-            
-            else {
+            } else {
                 edges.push({
-                    type: 'association',
+                    type: 'Association',
                     fromId: source.id,
                     toId: targetId,
                     multiplicity: '',
@@ -418,13 +408,13 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         const superclassNode = classNode?.descendantsOfType('superclass')[0];
         const typeIdentifier = superclassNode?.descendantsOfType('type_identifier')[0];
         const superClassName = typeIdentifier?.text;
-    
+
         if (superClassName) {
             const targetId = typeToId.get(superClassName);
 
             if (targetId && targetId !== source.id) {
                 edges.push({
-                    type: 'generalization',
+                    type: 'Generalization',
                     fromId: source.id,
                     toId: targetId,
                     multiplicity: '',
@@ -432,15 +422,11 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 });
             }
         }
-    
+
         return edges;
     }
 
     private isExposedInMethods(node: DiagramNode, fieldName: string): boolean {
-        return node.operations.some(op =>
-            op.attributes.some(attribute => attribute.name === fieldName)
-        );
+        return node.operations.some(op => op.attributes.some(attribute => attribute.name === fieldName));
     }
-    
 }
-
