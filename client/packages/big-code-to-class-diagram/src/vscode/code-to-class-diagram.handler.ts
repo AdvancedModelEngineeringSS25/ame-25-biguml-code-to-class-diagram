@@ -185,10 +185,16 @@ export class CodeToClassDiagramActionHandler implements Disposable {
             properties: await this.getProperties(tree), // TODO map enum constants as properties
             operations: await this.getMethods(tree),
             enumerationLiterals: await this.getEnumLiterals(tree),
-            comment: '' //TODO
+            comment: await this.getNodeComment(tree)
         };
 
         return c;
+    }
+
+    async getNodeComment(tree: Tree): Promise<DiagramNode['comment']> {
+        const commentNode = tree.rootNode.descendantsOfType('block_comment')[0];
+        if(commentNode) return commentNode.text;
+        return "";
     }
 
     async getNodeType(tree: Tree): Promise<DiagramNode['type']> {
