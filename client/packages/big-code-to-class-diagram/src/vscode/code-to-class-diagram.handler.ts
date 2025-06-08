@@ -51,6 +51,7 @@ const isCollectionType = (typeNode: any): boolean => {
     return text.includes('List') || text.includes('Set') || text.includes('[]');
 };
 
+// TODO multiplicities not needed for realization and generalization
 const createMultiplicity = (isCollectionType: boolean): Multiplicity => ({
     lower: isCollectionType ? 0 : 1,
     upper: isCollectionType ? '*' : 1
@@ -274,7 +275,6 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     async getProperties(tree: Tree | null): Promise<Property[]> {
         if (!tree) return [];
-        // const properties: Property[] = [];
         const parsedProperties = await this.parseProperties(tree);
 
         return parsedProperties.map(prop => ({
@@ -289,81 +289,61 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         const properties: ParsedProperty[] = [];
 
-        const interfaceNode = tree.rootNode.descendantsOfType('interface_declaration')[0];
-        let classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
+        const classNode =
+            tree.rootNode.descendantsOfType('class_declaration')[0] ?? tree.rootNode.descendantsOfType('interface_declaration')[0];
 
-        if (interfaceNode) {
-            classNode = interfaceNode;
-        }
+        if (!classNode) return properties;
 
-        if (classNode) {
-            const fieldNodes = classNode.descendantsOfType('field_declaration');
-            for (const fieldNode of fieldNodes) {
-                if (!fieldNode) continue;
-                const modifiersNode = fieldNode.descendantsOfType('modifiers');
-                const typeNode = fieldNode.childForFieldName('type');
+        const fieldNodes = classNode.descendantsOfType('field_declaration');
+        for (const fieldNode of fieldNodes) {
+            if (!fieldNode) continue;
+            const modifiersNode = fieldNode.descendantsOfType('modifiers');
+            const nodeType = fieldNode.childForFieldName('type');
 
-                //New
-                // const typeIdentifierNode = typeNode?.descendantsOfType('type_identifier')[0];
-                // const typeArgument = typeNode?.childForFieldName('type_arguments');
-                // const resolvedType = typeArgument?.descendantsOfType('type_identifier').map(n => n?.text);
-                //New end
+            const varDeclarator = fieldNode.descendantsOfType('variable_declarator')[0];
+            const nodeName = varDeclarator?.childForFieldName('name');
 
-                const varDeclarator = fieldNode.descendantsOfType('variable_declarator')[0];
-                const nameNode = varDeclarator?.childForFieldName('name');
+            let accessModifier: Property['accessModifier'] = '';
 
-                let accessModifier: Property['accessModifier'] = '';
+            if (!modifiersNode) continue;
+            for (const modifier of modifiersNode) {
+                const modifierText = modifier?.text;
 
-                if (!modifiersNode) continue;
-                for (const modifier of modifiersNode) {
-                    const modifierTexts = modifier?.text;
-                    if (modifierTexts?.includes('public')) {
-                        accessModifier = '+';
-                    } else if (modifierTexts?.includes('private')) {
-                        accessModifier = '-';
-                    } else if (modifierTexts?.includes('protected')) {
-                        accessModifier = '#';
-                    }
-                }
+                if (modifierText?.includes('public')) accessModifier = '+';
+                else if (modifierText?.includes('private')) accessModifier = '-';
+                else if (modifierText?.includes('protected')) accessModifier = '#';
+            }
 
-                const resolvedTypes: string[] = [];
+            const resolvedTypes: string[] = [];
 
-                if (typeNode) {
-                    const typeArgsNodes = typeNode.descendantsOfType('type_arguments');
-                    if (typeArgsNodes.length > 0) {
-                        const typeIdentifiers = typeArgsNodes[0]?.descendantsOfType('type_identifier') ?? [];
-                        for (const id of typeIdentifiers) {
-                            if (id) {
-                                resolvedTypes.push(id.text);
-                            }
-                        }
-                    } else {
-                        // Fallback to simple type
-                        const fallback = typeNode.descendantsOfType('type_identifier')[0];
-                        if (fallback) {
-                            resolvedTypes.push(fallback.text);
+            if (nodeType) {
+                const typeArgsNodes = nodeType.descendantsOfType('type_arguments');
+                if (typeArgsNodes.length > 0) {
+                    const typeIdentifiers = typeArgsNodes[0]?.descendantsOfType('type_identifier') ?? [];
+                    for (const id of typeIdentifiers) {
+                        if (id) {
+                            resolvedTypes.push(id.text);
                         }
                     }
+                } else {
+                    // Fallback to simple type
+                    const fallback = nodeType.descendantsOfType('type_identifier')[0];
+                    if (fallback) {
+                        resolvedTypes.push(fallback.text);
+                    }
                 }
-                // if (typeNode) {
-                //     const typeIdentifiers = typeNode.descendantsOfType('type_identifier');
+            }
 
-                //     if (typeIdentifiers.length >= 1) {
-                //         resolvedType = typeIdentifiers[typeIdentifiers.length - 1]?.text;
-                //     }
-                // }
+            if (nodeName && nodeType) {
+                const isCollection = isCollectionType(nodeType);
 
-                if (nameNode && typeNode) {
-                    const isCollection = isCollectionType(typeNode);
-
-                    properties.push({
-                        name: nameNode.text,
-                        type: typeNode.text,
-                        accessModifier,
-                        isCollection,
-                        resolvedTypes: resolvedTypes
-                    });
-                }
+                properties.push({
+                    name: nodeName.text,
+                    type: nodeType.text,
+                    accessModifier,
+                    isCollection,
+                    resolvedTypes
+                });
             }
         }
 
@@ -472,73 +452,32 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 const sourceMultiplicity = createMultiplicity(false);
                 const targetMultiplicity = createMultiplicity(property.isCollection);
 
+                // Default is association
                 let relationshipType: 'Association' | 'Aggregation' | 'Composition' = 'Association';
 
-                if (property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
+                const isPrivateOrProtected = property.accessModifier === '-' || property.accessModifier === '#';
+                const isPassedAsMethodParameter = this.isMethodParameter(sourceTree, property.resolvedTypes ?? []);
+
+                // TODO check if these assumptions hold
+                // Check for Composition: If the object is either a private or protected field and is instantiated in the class (not part of a method parameter)
+                if (isPrivateOrProtected && !isPassedAsMethodParameter) {
                     relationshipType = 'Composition';
-                } else if (property.accessModifier !== '-') {
+                }
+                // Check for Aggregation: If a field is injected (e.g., via constructor or setter) and is not instantiated in the class
+                else if (isPrivateOrProtected) {
                     relationshipType = 'Aggregation';
-                } else {
-                    relationshipType = 'Association';
                 }
 
-                edges.push({
-                    type: relationshipType,
-                    fromId: source.id,
-                    toId: targetId,
-                    label: property.name,
-                    sourceMultiplicity: sourceMultiplicity,
-                    targetMultiplicity: targetMultiplicity
-                });
+                if (property.isCollection)
+                    edges.push({
+                        type: relationshipType,
+                        fromId: source.id,
+                        toId: targetId,
+                        label: property.name,
+                        sourceMultiplicity: sourceMultiplicity,
+                        targetMultiplicity: targetMultiplicity
+                    });
             }
-
-            // // Check for composition
-            // if (property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
-            //     edges.push({
-            //         type: 'Composition',
-            //         fromId: source.id,
-            //         toId: targetId,
-            //         label: '',
-            //         sourceMultiplicity: {
-            //             lower: 1,
-            //             upper: '*'
-            //         },
-            //         targetMultiplicity: {
-            //             lower: 1,
-            //             upper: '*'
-            //         }
-            //     });
-            // } else if (property.accessModifier !== '-') {
-            //     edges.push({
-            //         type: 'Aggregation',
-            //         fromId: source.id,
-            //         toId: targetId,
-            //         label: '',
-            //         sourceMultiplicity: {
-            //             lower: 1,
-            //             upper: '*'
-            //         },
-            //         targetMultiplicity: {
-            //             lower: 1,
-            //             upper: '*'
-            //         }
-            //     });
-            // } else {
-            //     edges.push({
-            //         type: 'Association',
-            //         fromId: source.id,
-            //         toId: targetId,
-            //         label: '',
-            //         sourceMultiplicity: {
-            //             lower: 1,
-            //             upper: '*'
-            //         },
-            //         targetMultiplicity: {
-            //             lower: 1,
-            //             upper: '*'
-            //         }
-            //     });
-            // }
         }
 
         // Check for generalization (superclass)
@@ -585,7 +524,13 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return edges;
     }
 
-    private isExposedInMethods(node: DiagramNode, fieldName: string): boolean {
-        return node.operations.some(op => op.attributes.some(attribute => attribute.name === fieldName));
+    private isMethodParameter(tree: Tree, resolvedTypes: string[]): boolean {
+        return tree.rootNode.descendantsOfType('method_declaration').some(method => {
+            const params = method?.childForFieldName('parameters')?.namedChildren ?? [];
+            return params.some(param => {
+                const paramType = param?.childForFieldName('type')?.text;
+                return resolvedTypes.includes(paramType ? paramType : '');
+            });
+        });
     }
 }
