@@ -50,8 +50,8 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
                 this.webviewConnector.dispatch(message);
             }),
             this.webviewConnector.onReady(() => {
-                // this.requestFolder();
-                // this.requestDiagram();
+                this.requestFolder();
+                this.requestDiagram();
                 // TODO: Example code to create a diagram
                 this.createDiagram({
                     nodes: [
