@@ -91,14 +91,28 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
                             fromId: '1',
                             toId: '2',
                             type: 'Association',
-                            multiplicity: '1..*',
+                            sourceMultiplicity: {
+                                lower: 1,
+                                upper: '*'
+                            },
+                            targetMultiplicity: {
+                                lower: 1,
+                                upper: '*'
+                            },
                             label: 'uses'
                         },
                         {
                             fromId: '1',
                             toId: '2',
                             type: 'Association',
-                            multiplicity: '1..*',
+                            sourceMultiplicity: {
+                                lower: 1,
+                                upper: '*'
+                            },
+                            targetMultiplicity: {
+                                lower: 1,
+                                upper: '*'
+                            },
                             label: 'should be replaced'
                         }
                     ]

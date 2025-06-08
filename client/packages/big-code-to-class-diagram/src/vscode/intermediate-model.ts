@@ -29,8 +29,9 @@ export type Edge = {
         | 'Usage';
     fromId: string;
     toId: string;
-    multiplicity: string;
     label: string;
+    sourceMultiplicity: Multiplicity;
+    targetMultiplicity: Multiplicity;
 };
 
 export type Node = {
@@ -48,6 +49,9 @@ export type Property = {
     name: string;
     type: string;
     accessModifier: '+' | '-' | '#' | '';
+    resolvedType?: string;
+    sourceMultiplicity?: Multiplicity;
+    targetMultiplicity?: Multiplicity;
 };
 
 export type Operation = {
@@ -60,4 +64,9 @@ export type Operation = {
 export type Attribute = {
     name: string;
     type: string;
+};
+
+export type Multiplicity = {
+    lower: number;
+    upper: number | '*';
 };
