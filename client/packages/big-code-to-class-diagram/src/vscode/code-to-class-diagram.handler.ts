@@ -29,7 +29,32 @@ import {
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
-import { type Diagram, type Node as DiagramNode, type Edge, type Operation, type Property } from './intermediate-model.js';
+import {
+    type Diagram,
+    type Node as DiagramNode,
+    type Edge,
+    type Multiplicity,
+    type Operation,
+    type Property
+} from './intermediate-model.js';
+
+type ParsedProperty = {
+    name: string;
+    type: string;
+    accessModifier: '+' | '-' | '#' | '';
+    isCollection: boolean;
+    resolvedTypes?: string[];
+};
+
+const isCollectionType = (typeNode: any): boolean => {
+    const text = typeNode.text;
+    return text.includes('List') || text.includes('Set') || text.includes('[]');
+};
+
+const createMultiplicity = (isCollectionType: boolean): Multiplicity => ({
+    lower: isCollectionType ? 0 : 1,
+    upper: isCollectionType ? '*' : 1
+});
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -90,16 +115,16 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 this.diagram.nodes.push(...nodes);
 
                 // Create Edges
-                const typeToId = new Map<string, string>();
+                const nodeNameToIdMap = new Map<string, string>();
 
                 for (const node of this.diagram.nodes) {
-                    typeToId.set(node.name, node.id);
+                    nodeNameToIdMap.set(node.name, node.id);
                 }
 
                 const edgesArrays = await Promise.all(
                     Array.from(this.diagram.nodes).map(node => {
                         const tree = this.fileMap.get(node.name);
-                        return tree ? this.createEdge(node, tree, typeToId) : Promise.resolve([]);
+                        return tree ? this.createEdges(node, tree, nodeNameToIdMap) : Promise.resolve([]);
                     })
                 );
 
@@ -193,8 +218,8 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     async getNodeComment(tree: Tree): Promise<DiagramNode['comment']> {
         const commentNode = tree.rootNode.descendantsOfType('block_comment')[0];
-        if(commentNode) return commentNode.text;
-        return "";
+        if (commentNode) return commentNode.text;
+        return '';
     }
 
     async getNodeType(tree: Tree): Promise<DiagramNode['type']> {
@@ -249,10 +274,24 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
     async getProperties(tree: Tree | null): Promise<Property[]> {
         if (!tree) return [];
-        const properties: Property[] = [];
+        // const properties: Property[] = [];
+        const parsedProperties = await this.parseProperties(tree);
+
+        return parsedProperties.map(prop => ({
+            name: prop.name,
+            type: prop.type,
+            accessModifier: prop.accessModifier
+        }));
+    }
+
+    private async parseProperties(tree: Tree): Promise<ParsedProperty[]> {
+        console.log('Method call: parseProperties');
+
+        const properties: ParsedProperty[] = [];
 
         const interfaceNode = tree.rootNode.descendantsOfType('interface_declaration')[0];
         let classNode = tree.rootNode.descendantsOfType('class_declaration')[0];
+
         if (interfaceNode) {
             classNode = interfaceNode;
         }
@@ -263,6 +302,13 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 if (!fieldNode) continue;
                 const modifiersNode = fieldNode.descendantsOfType('modifiers');
                 const typeNode = fieldNode.childForFieldName('type');
+
+                //New
+                // const typeIdentifierNode = typeNode?.descendantsOfType('type_identifier')[0];
+                // const typeArgument = typeNode?.childForFieldName('type_arguments');
+                // const resolvedType = typeArgument?.descendantsOfType('type_identifier').map(n => n?.text);
+                //New end
+
                 const varDeclarator = fieldNode.descendantsOfType('variable_declarator')[0];
                 const nameNode = varDeclarator?.childForFieldName('name');
 
@@ -280,11 +326,42 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     }
                 }
 
+                const resolvedTypes: string[] = [];
+
+                if (typeNode) {
+                    const typeArgsNodes = typeNode.descendantsOfType('type_arguments');
+                    if (typeArgsNodes.length > 0) {
+                        const typeIdentifiers = typeArgsNodes[0]?.descendantsOfType('type_identifier') ?? [];
+                        for (const id of typeIdentifiers) {
+                            if (id) {
+                                resolvedTypes.push(id.text);
+                            }
+                        }
+                    } else {
+                        // Fallback to simple type
+                        const fallback = typeNode.descendantsOfType('type_identifier')[0];
+                        if (fallback) {
+                            resolvedTypes.push(fallback.text);
+                        }
+                    }
+                }
+                // if (typeNode) {
+                //     const typeIdentifiers = typeNode.descendantsOfType('type_identifier');
+
+                //     if (typeIdentifiers.length >= 1) {
+                //         resolvedType = typeIdentifiers[typeIdentifiers.length - 1]?.text;
+                //     }
+                // }
+
                 if (nameNode && typeNode) {
+                    const isCollection = isCollectionType(typeNode);
+
                     properties.push({
                         name: nameNode.text,
                         type: typeNode.text,
-                        accessModifier
+                        accessModifier,
+                        isCollection,
+                        resolvedTypes: resolvedTypes
                     });
                 }
             }
@@ -371,45 +448,100 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         return identifierNode?.text ?? crypto.randomUUID();
     }
 
-    async createEdge(source: DiagramNode, sourceTree: Tree, typeToId: Map<string, string>): Promise<Edge[]> {
+    async createEdges(source: DiagramNode, sourceTree: Tree, typeToId: Map<string, string>): Promise<Edge[]> {
         // TODO extend to other edge types
+        console.log('Creating edges');
 
         const edges: Edge[] = [];
 
-        for (const property of source.properties) {
-            const targetId = typeToId.get(property.type);
+        const parsedProperties = await this.parseProperties(sourceTree);
+        console.log('Parsed properties:', parsedProperties);
 
-            if (!targetId || targetId === source.id) continue;
+        // for (const property of parsedProperties) {
+        for (const property of parsedProperties) {
+            console.log('Processing property: ', property);
 
-            // Check for composition
-            if (property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
+            for (const resolvedType of property.resolvedTypes ?? []) {
+                console.log('Resolved type:', resolvedType);
+
+                const targetId = typeToId.get(resolvedType);
+                console.log('Target ID for property:', targetId);
+
+                if (!targetId || targetId === source.id) continue;
+
+                const sourceMultiplicity = createMultiplicity(false);
+                const targetMultiplicity = createMultiplicity(property.isCollection);
+
+                let relationshipType: 'Association' | 'Aggregation' | 'Composition' = 'Association';
+
+                if (property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
+                    relationshipType = 'Composition';
+                } else if (property.accessModifier !== '-') {
+                    relationshipType = 'Aggregation';
+                } else {
+                    relationshipType = 'Association';
+                }
+
                 edges.push({
-                    type: 'Composition',
+                    type: relationshipType,
                     fromId: source.id,
                     toId: targetId,
-                    multiplicity: '',
-                    label: ''
-                });
-            } else if (property.accessModifier !== '-') {
-                edges.push({
-                    type: 'Aggregation',
-                    fromId: source.id,
-                    toId: targetId,
-                    multiplicity: '',
-                    label: ''
-                });
-            } else {
-                edges.push({
-                    type: 'Association',
-                    fromId: source.id,
-                    toId: targetId,
-                    multiplicity: '',
-                    label: ''
+                    label: property.name,
+                    sourceMultiplicity: sourceMultiplicity,
+                    targetMultiplicity: targetMultiplicity
                 });
             }
+
+            // // Check for composition
+            // if (property.accessModifier === '-' && !this.isExposedInMethods(source, property.name)) {
+            //     edges.push({
+            //         type: 'Composition',
+            //         fromId: source.id,
+            //         toId: targetId,
+            //         label: '',
+            //         sourceMultiplicity: {
+            //             lower: 1,
+            //             upper: '*'
+            //         },
+            //         targetMultiplicity: {
+            //             lower: 1,
+            //             upper: '*'
+            //         }
+            //     });
+            // } else if (property.accessModifier !== '-') {
+            //     edges.push({
+            //         type: 'Aggregation',
+            //         fromId: source.id,
+            //         toId: targetId,
+            //         label: '',
+            //         sourceMultiplicity: {
+            //             lower: 1,
+            //             upper: '*'
+            //         },
+            //         targetMultiplicity: {
+            //             lower: 1,
+            //             upper: '*'
+            //         }
+            //     });
+            // } else {
+            //     edges.push({
+            //         type: 'Association',
+            //         fromId: source.id,
+            //         toId: targetId,
+            //         label: '',
+            //         sourceMultiplicity: {
+            //             lower: 1,
+            //             upper: '*'
+            //         },
+            //         targetMultiplicity: {
+            //             lower: 1,
+            //             upper: '*'
+            //         }
+            //     });
+            // }
         }
 
-        // Check for generalization
+        // Check for generalization (superclass)
         const classNode = sourceTree.rootNode.descendantsOfType('class_declaration')[0];
         const superclassNode = classNode?.descendantsOfType('superclass')[0];
         const typeIdentifier = superclassNode?.descendantsOfType('type_identifier')[0];
@@ -423,8 +555,29 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     type: 'Generalization',
                     fromId: source.id,
                     toId: targetId,
-                    multiplicity: '',
-                    label: ''
+                    label: '',
+                    sourceMultiplicity: createMultiplicity(false),
+                    targetMultiplicity: createMultiplicity(false)
+                });
+            }
+        }
+
+        // Check for realization (interfaces)
+        const isInterfaceNode = classNode?.descendantsOfType('super_interfaces')[0];
+        const interfaceNodeTypeIdentifier = isInterfaceNode?.descendantsOfType('type_identifier')[0];
+        const interfaceName = interfaceNodeTypeIdentifier?.text;
+
+        if (interfaceName) {
+            const targetId = typeToId.get(interfaceName);
+
+            if (targetId && targetId !== source.id) {
+                edges.push({
+                    type: 'Realization',
+                    fromId: source.id,
+                    toId: targetId,
+                    label: '',
+                    sourceMultiplicity: createMultiplicity(false),
+                    targetMultiplicity: createMultiplicity(false)
                 });
             }
         }

@@ -50,8 +50,9 @@ export type Property = {
     type: string;
     accessModifier: '+' | '-' | '#' | '';
     resolvedType?: string;
-    sourceMultiplicity?: Multiplicity;
-    targetMultiplicity?: Multiplicity;
+    // resolvedType?: string;
+    // sourceMultiplicity?: Multiplicity;
+    // targetMultiplicity?: Multiplicity;
 };
 
 export type Operation = {
