@@ -30,8 +30,8 @@ export type Edge = {
     fromId: string;
     toId: string;
     label: string;
-    sourceMultiplicity: Multiplicity;
-    targetMultiplicity: Multiplicity;
+    sourceMultiplicity?: Multiplicity;
+    targetMultiplicity?: Multiplicity;
 };
 
 export type Node = {
@@ -50,9 +50,6 @@ export type Property = {
     type: string;
     accessModifier: '+' | '-' | '#' | '';
     resolvedType?: string;
-    // resolvedType?: string;
-    // sourceMultiplicity?: Multiplicity;
-    // targetMultiplicity?: Multiplicity;
 };
 
 export type Operation = {

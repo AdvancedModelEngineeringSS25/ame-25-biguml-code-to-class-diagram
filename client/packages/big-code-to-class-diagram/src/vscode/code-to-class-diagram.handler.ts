@@ -494,30 +494,27 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                     type: 'Generalization',
                     fromId: source.id,
                     toId: targetId,
-                    label: '',
-                    sourceMultiplicity: createMultiplicity(false),
-                    targetMultiplicity: createMultiplicity(false)
+                    label: ''
                 });
             }
         }
 
         // Check for realization (interfaces)
-        const isInterfaceNode = classNode?.descendantsOfType('super_interfaces')[0];
-        const interfaceNodeTypeIdentifier = isInterfaceNode?.descendantsOfType('type_identifier')[0];
-        const interfaceName = interfaceNodeTypeIdentifier?.text;
+        const interfaceIdentifiers = classNode?.descendantsOfType('super_interfaces')[0]?.descendantsOfType('type_identifier') ?? [];
 
-        if (interfaceName) {
-            const targetId = typeToId.get(interfaceName);
+        for (const interfaceNode of interfaceIdentifiers) {
+            const interfaceName = interfaceNode?.text;
+            if (interfaceName) {
+                const targetId = typeToId.get(interfaceName);
 
-            if (targetId && targetId !== source.id) {
-                edges.push({
-                    type: 'Realization',
-                    fromId: source.id,
-                    toId: targetId,
-                    label: '',
-                    sourceMultiplicity: createMultiplicity(false),
-                    targetMultiplicity: createMultiplicity(false)
-                });
+                if (targetId && targetId !== source.id) {
+                    edges.push({
+                        type: 'Realization',
+                        fromId: source.id,
+                        toId: targetId,
+                        label: ''
+                    });
+                }
             }
         }
 
