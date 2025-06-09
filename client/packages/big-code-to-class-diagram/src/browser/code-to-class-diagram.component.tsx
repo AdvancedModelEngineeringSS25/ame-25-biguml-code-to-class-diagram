@@ -8,45 +8,65 @@
  **********************************************************************************/
 import { VSCodeContext } from '@borkdominik-biguml/big-components';
 import { useCallback, useContext, useEffect, useState, type ReactElement } from 'react';
-import { GenerateDiagramRequestAction, RequestSelectFolderAction, SelectedFolderResponseAction } from '../common/code-to-class-diagram.action.js';
+import { ChangeLanguageResponseAction, GenerateDiagramRequestAction, RequestChangeLanguageAction, RequestSelectFolderAction, SelectedFolderResponseAction, type Option } from '../common/code-to-class-diagram.action.js';
+
+
 
 export function CodeToClassDiagram(): ReactElement {
     const { listenAction, dispatchAction } = useContext(VSCodeContext);
     const [folder, setFolder] = useState<string | null>(null);
-    const [javaFileCount, setJavaFileCount] = useState<number | null>(null);
+    const [fileCount, setFileCount] = useState<number | null>(null);
+    const [selectedOption, setSelectedOption] = useState<Option>('Java');
+
+    const handleSelectLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = event.target.value as Option;
+        setSelectedOption(value);
+        dispatchAction(RequestChangeLanguageAction.create({ language: value }));
+    };
 
     useEffect(() => {
         listenAction(action => {
-            console.log("ACTION", action)
+            console.log("Action received", action);
             if (SelectedFolderResponseAction.is(action)) {
-                console.log("Action received");
                 setFolder(action.folderPath);
-                setJavaFileCount(action.javaFileCount);
-                console.log("Folder set: ", action.folderPath);
-                console.log("Number of Classes: ", action.javaFileCount);
+                setFileCount(action.fileCount);
+            }
+            if (ChangeLanguageResponseAction.is(action)) {
+                setFileCount(action.fileCount);
             }
         });
     }, [listenAction]);
 
+
     const openFile = useCallback(() => {
-        console.log("Import File was Pressed!")
         dispatchAction(RequestSelectFolderAction.create());
-        console.log("Action dispatched: import file")
     }, [dispatchAction]);
 
     const generateDiagram = useCallback(() => {
-        console.log("Generate diagram button was Pressed!")
         dispatchAction(GenerateDiagramRequestAction.create());
-        console.log("Action dispatched: generate diagram")
     }, [dispatchAction]);
 
     return (
         <div>
-            <span>CODE TO CLASS DIAGRAM!</span>
-            <span>Selected Folder: {folder}</span>
-            <span>Files used for file generation: {javaFileCount}</span>
-            <button onClick={() => openFile()}>Import File</button>
-            <button onClick={() => generateDiagram()}>Generate Diagram</button>
+
+            <button onClick={() => openFile()}>📁 Select Project Folder</button>
+            {folder !== null && (
+                <div>
+                    <span><strong>Selected Folder:</strong> {folder}</span>
+                    <span><strong>Files used for file generation:</strong> {fileCount}</span>
+                </div>
+            )}
+            {folder !== null && (
+                <div>
+                    <br />
+                    <label htmlFor="language-select">Choose Project Language: </label>
+                    <select id="language-select" value={selectedOption} onChange={handleSelectLanguageChange}>
+                        <option value="Java">Java</option>
+                    </select>
+
+                    <button onClick={() => generateDiagram()}>Generate Class Diagram</button>
+                </div>
+            )}
         </div>
     );
 }

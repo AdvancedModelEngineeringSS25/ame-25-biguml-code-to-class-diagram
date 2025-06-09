@@ -24,8 +24,10 @@ import type { Tree } from 'web-tree-sitter';
 import * as treeSitter from 'web-tree-sitter';
 
 import {
+    ChangeLanguageResponseAction,
     GenerateDiagramRequestAction,
     GenerateDiagramResponseAction,
+    RequestChangeLanguageAction,
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
@@ -79,6 +81,8 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     protected init(): void {
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(RequestSelectFolderAction.KIND, async () => {
+                
+                console.log('RequestSelectFolderAction');
                 await this.doInit();
                 const folders = await vscode.window.showOpenDialog({
                     canSelectFolders: true,
@@ -87,15 +91,28 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 });
 
                 const folderPath = folders?.[0]?.fsPath ?? null;
-                console.log('Selected folder:', folderPath);
+                console.log('Selected Folder:', folderPath);
                 this.path = folderPath;
 
-                const javaFileCount = await this.countNumberOfJavaFiles(folderPath);
-                console.log(`Found ${javaFileCount} .java files in ${folderPath}`);
+                const fileCount = await this.countNumberOfJavaFiles(folderPath);
+                console.log(`Found ${fileCount} .java files in ${folderPath}`);
 
                 return SelectedFolderResponseAction.create({
                     folderPath: folderPath,
-                    javaFileCount: javaFileCount
+                    fileCount: fileCount
+                });
+            })
+        );
+
+        this.toDispose.push(
+            this.actionListener.handleVSCodeRequest<RequestChangeLanguageAction>(RequestChangeLanguageAction.KIND, async message => {
+                console.log('RequestChangeLanguageAction - Selected Language:', message.action.language);
+
+                const fileCount = await this.countNumberOfJavaFiles(this.path);
+                console.log(`Found ${fileCount} .java files in ${this.path}`);
+
+                return ChangeLanguageResponseAction.create({
+                    fileCount: fileCount
                 });
             })
         );

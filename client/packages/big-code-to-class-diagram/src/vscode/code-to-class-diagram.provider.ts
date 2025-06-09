@@ -17,8 +17,10 @@ import { CreateEdgeOperation, CreateNodeOperation } from '@eclipse-glsp/protocol
 import { inject, injectable, postConstruct } from 'inversify';
 import { v4 } from 'uuid';
 import {
+    ChangeLanguageResponseAction,
     GenerateDiagramRequestAction,
     GenerateDiagramResponseAction,
+    RequestChangeLanguageAction,
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
@@ -50,8 +52,9 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
                 this.webviewConnector.dispatch(message);
             }),
             this.webviewConnector.onReady(() => {
-                this.requestFolder();
-                this.requestDiagram();
+                //this.requestFolder();
+                //this.requestDiagram();
+                this.requestLanguage();
                 // TODO: Example code to create a diagram
                 this.createDiagram({
                     nodes: [
@@ -128,12 +131,14 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
                 // Send a message to the webview when there is no active client
                 this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
                 this.webviewConnector.dispatch(GenerateDiagramResponseAction.create());
+                this.webviewConnector.dispatch(ChangeLanguageResponseAction.create());
             }),
             this.connectionManager.onNoConnection(() => {
                 console.warn('onNoConnection');
                 // Send a message to the webview when there is no glsp client
                 this.webviewConnector.dispatch(SelectedFolderResponseAction.create());
                 this.webviewConnector.dispatch(GenerateDiagramResponseAction.create());
+                this.webviewConnector.dispatch(ChangeLanguageResponseAction.create());
             }),
             this.modelState.onDidChangeModelState(() => {
                 console.warn('onDidChangeModelState');
@@ -149,6 +154,10 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
 
     protected requestDiagram(): void {
         this.actionDispatcher.dispatch(GenerateDiagramRequestAction.create());
+    }
+
+    protected requestLanguage(): void {
+        this.actionDispatcher.dispatch(RequestChangeLanguageAction.create({language: "Java"}));
     }
 
     createDiagram(diagram: Diagram): void {

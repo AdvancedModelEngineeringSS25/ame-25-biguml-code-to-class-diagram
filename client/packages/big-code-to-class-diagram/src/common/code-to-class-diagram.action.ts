@@ -12,6 +12,7 @@ import { Action, RequestAction, type ResponseAction } from '@eclipse-glsp/protoc
 // ========= This action will be handled by the GLSP Client =========
 
 
+export type Option = 'Java' | 'Python' //| 'C++';
 
 export interface RequestSelectFolderAction extends RequestAction<SelectedFolderResponseAction> {
     kind: typeof RequestSelectFolderAction.KIND;
@@ -32,10 +33,58 @@ export namespace RequestSelectFolderAction {
     }
 }
 
+export interface RequestChangeLanguageAction extends RequestAction<ChangeLanguageResponseAction> {
+    kind: typeof RequestChangeLanguageAction.KIND;
+    language: Option | null;
+}
+
+export namespace RequestChangeLanguageAction {
+    export const KIND = 'requestSelectFolder';
+
+    export function is(object: unknown): object is RequestChangeLanguageAction {
+        return RequestAction.hasKind(object, KIND);
+    }
+
+    export function create(options: Omit<RequestChangeLanguageAction, 'kind' | 'requestId'>): RequestChangeLanguageAction {
+        return {
+            kind: KIND,
+            requestId: '',
+            ...options
+        };
+    }
+}
+
+
+
+export interface ChangeLanguageResponseAction extends ResponseAction {
+    kind: typeof ChangeLanguageResponseAction.KIND;
+    fileCount: number | null;
+}
+
+export namespace ChangeLanguageResponseAction {
+    export const KIND = 'selectedFolderResponse';
+
+    export function is(object: unknown): object is ChangeLanguageResponseAction {
+        return Action.hasKind(object, KIND);
+    }
+
+    export function create(
+        options?: Omit<ChangeLanguageResponseAction, 'kind' | 'responseId'> & { responseId?: string }
+    ): ChangeLanguageResponseAction {
+        return {
+            kind: KIND,
+            responseId: '',
+            fileCount: null,
+            ...options
+        };
+    }
+}
+
+
 export interface SelectedFolderResponseAction extends ResponseAction {
     kind: typeof SelectedFolderResponseAction.KIND;
     folderPath: string | null;
-    javaFileCount: number | null;
+    fileCount: number | null;
 }
 
 export namespace SelectedFolderResponseAction {
@@ -52,7 +101,7 @@ export namespace SelectedFolderResponseAction {
             kind: KIND,
             responseId: '',
             folderPath: null,
-            javaFileCount: null,
+            fileCount: null,
             ...options
         };
     }
