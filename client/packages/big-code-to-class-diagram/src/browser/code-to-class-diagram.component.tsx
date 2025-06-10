@@ -21,7 +21,7 @@ export function CodeToClassDiagram(): ReactElement {
     const handleSelectLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const value = event.target.value as Option;
         setSelectedOption(value);
-        dispatchAction(RequestChangeLanguageAction.create({ language: value }));
+        dispatchAction(RequestChangeLanguageAction.create({ language: selectedOption }));
     };
 
     useEffect(() => {
