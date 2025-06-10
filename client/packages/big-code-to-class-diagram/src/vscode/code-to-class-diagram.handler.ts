@@ -16,10 +16,18 @@ import {
     type ExperimentalGLSPServerModelState
 } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { DisposableCollection } from '@eclipse-glsp/protocol';
-import * as fs from 'fs/promises';
 import { inject, injectable, postConstruct } from 'inversify';
 import * as vscode from 'vscode';
 import type { Tree } from 'web-tree-sitter';
+
+import {
+    BatchCreateOperation,
+    UpdateElementPropertyAction,
+    type BatchOperation,
+    type TempCreationId
+} from '@borkdominik-biguml/uml-protocol';
+import { CreateEdgeOperation, CreateNodeOperation } from '@eclipse-glsp/protocol';
+import { v4 } from 'uuid';
 
 import {
     ChangeLanguageResponseAction,
@@ -33,6 +41,9 @@ import {
     type Diagram,
     type Node as DiagramNode,
     type Edge,
+    type Node,
+    type Operation,
+    type Property,
 } from './intermediate-model.js';
 import { JavaUtils } from './java/JavaUtils.js';
 
@@ -147,9 +158,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 const edges = edgesArrays.flat();
                 this.diagram.edges.push(...edges);
 
-                console.log(this.diagram);
-
-                await fs.writeFile('diagram-node.json', JSON.stringify(this.diagram, null, 2), 'utf-8');
+                this.createDiagram(this.diagram);
 
                 return GenerateDiagramResponseAction.create();
             })
@@ -201,6 +210,122 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     }
 
 
+    createDiagram(diagram: Diagram): void {
+        const operations: BatchOperation[] = [];
+
+        function handleNode(node: Node, containerId?: string): BatchOperation {
+            const tempId: TempCreationId = `temp_${node.id}`;
+
+            const createOperation = CreateNodeOperation.create(`CLASS__${node.type}`, { containerId });
+            const updateActions: UpdateElementPropertyAction[] = [];
+
+            if (node.name) {
+                updateActions.push(
+                    UpdateElementPropertyAction.create({
+                        elementId: tempId,
+                        propertyId: 'name',
+                        value: node.name
+                    })
+                );
+            }
+
+            return {
+                tempCreationId: tempId,
+                createOperation,
+                updateActions
+            };
+        }
+
+        function handleProperty(node: Node, property: Property): BatchOperation {
+            const tempId: TempCreationId = `temp_${v4()}`;
+
+            const createOperation = CreateNodeOperation.create(`CLASS__Property`, { containerId: `temp_${node.id}` });
+            const updateActions: UpdateElementPropertyAction[] = [];
+
+            if (property.name) {
+                updateActions.push(
+                    UpdateElementPropertyAction.create({
+                        elementId: tempId,
+                        propertyId: 'name',
+                        value: property.name
+                    })
+                );
+            }
+
+            return {
+                tempCreationId: tempId,
+                createOperation,
+                updateActions
+            };
+        }
+
+        function handleOperation(node: Node, operation: Operation): BatchOperation {
+            const tempId: TempCreationId = `temp_${v4()}`;
+
+            const createOperation = CreateNodeOperation.create(`CLASS__Operation`, { containerId: `temp_${node.id}` });
+            const updateActions: UpdateElementPropertyAction[] = [];
+
+            if (operation.name) {
+                updateActions.push(
+                    UpdateElementPropertyAction.create({
+                        elementId: tempId,
+                        propertyId: 'name',
+                        value: operation.name
+                    })
+                );
+            }
+
+            return {
+                tempCreationId: tempId,
+                createOperation,
+                updateActions
+            };
+        }
+
+        function handleEdge(edge: Edge): BatchOperation {
+            const tempId: TempCreationId = `temp_${v4()}`;
+
+            const createOperation = CreateEdgeOperation.create({
+                elementTypeId: `CLASS__${edge.type}`,
+                sourceElementId: `temp_${edge.fromId}`,
+                targetElementId: `temp_${edge.toId}`
+            });
+            const updateActions: UpdateElementPropertyAction[] = [];
+
+            if (edge.label) {
+                updateActions.push(
+                    UpdateElementPropertyAction.create({
+                        elementId: tempId,
+                        propertyId: 'name',
+                        value: edge.label
+                    })
+                );
+            }
+
+            return {
+                tempCreationId: tempId,
+                createOperation,
+                updateActions
+            };
+        }
+
+        for (const node of diagram.nodes) {
+            operations.push(handleNode(node));
+            for (const property of node.properties) {
+                operations.push(handleProperty(node, property));
+            }
+            for (const operation of node.operations) {
+                operations.push(handleOperation(node, operation));
+            }
+        }
+
+        for (const edge of diagram.edges) {
+            operations.push(handleEdge(edge));
+        }
+
+       
+        this.actionDispatcher.dispatch(BatchCreateOperation.create(operations));
+    }
 
     
 }
