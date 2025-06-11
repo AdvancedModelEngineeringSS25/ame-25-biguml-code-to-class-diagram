@@ -37,19 +37,8 @@ import {
     RequestSelectFolderAction,
     SelectedFolderResponseAction
 } from '../common/code-to-class-diagram.action.js';
-import {
-    type Diagram,
-    type Node as DiagramNode,
-    type Edge,
-    type Node,
-    type Operation,
-    type Property,
-} from './intermediate-model.js';
+import { type Diagram, type Node as DiagramNode, type Edge, type Node, type Operation, type Property } from './intermediate-model.js';
 import { JavaUtils } from './java/JavaUtils.js';
-
-
-
-
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -70,17 +59,16 @@ export class CodeToClassDiagramActionHandler implements Disposable {
     private fileMap = new Map<string, Tree>();
     private fileCount = 0;
     private diagram: Diagram = { edges: [], nodes: [] };
-    language: string = "Java";
+    language: string = 'Java';
 
     @postConstruct()
     protected init(): void {
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<RequestSelectFolderAction>(RequestSelectFolderAction.KIND, async () => {
-                
                 console.log('RequestSelectFolderAction');
 
                 //EXT-LANGUAGE-TODO
-                if(this.language === "Java"){ 
+                if (this.language === 'Java') {
                     await this.javaUtils.doInit(this.extensionContext.extensionUri);
                 }
 
@@ -96,7 +84,7 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 this.fileCount = 0;
 
                 //EXT-LANGUAGE-TODO
-                if(this.language === "Java" && folderPath !== null){
+                if (this.language === 'Java' && folderPath !== null) {
                     this.fileCount = await this.javaUtils.countNumberOfJavaFiles(folderPath);
                     console.log(`Found ${this.fileCount} .java files in ${folderPath}`);
                 }
@@ -112,10 +100,10 @@ export class CodeToClassDiagramActionHandler implements Disposable {
             this.actionListener.handleVSCodeRequest<RequestChangeLanguageAction>(RequestChangeLanguageAction.KIND, async message => {
                 console.log('RequestChangeLanguageAction - Selected Language:', message.action.language);
                 this.fileCount = 0;
-                if(message.action.language != null) this.language = message.action.language;
+                if (message.action.language != null) this.language = message.action.language;
 
                 //EXT-LANGUAGE-TODO
-                if(this.language === "Java" && this.path !== null){
+                if (this.language === 'Java' && this.path !== null) {
                     this.fileCount = await this.javaUtils.countNumberOfJavaFiles(this.path);
                     console.log(`Found ${this.fileCount} .java files in ${this.path}`);
                 }
@@ -158,31 +146,30 @@ export class CodeToClassDiagramActionHandler implements Disposable {
                 const edges = edgesArrays.flat();
                 this.diagram.edges.push(...edges);
 
+                console.log('Generated Diagram:', this.diagram);
+
                 this.createDiagram(this.diagram);
 
                 return GenerateDiagramResponseAction.create();
             })
         );
     }
-    
-    
-    async readClassesAsMap(dirPath: string | null): Promise<Map<string, Tree>>{
+
+    async readClassesAsMap(dirPath: string | null): Promise<Map<string, Tree>> {
         //EXT-LANGUAGE-TODO
-        if(this.language === "Java"){
+        if (this.language === 'Java') {
             return await this.javaUtils.readJavaFilesAsMap(dirPath);
         }
         return new Map<string, Tree>();
     }
 
-
-     async createEdges(source: DiagramNode, sourceTree: Tree, typeToId: Map<string, string>): Promise<Edge[]> {
-        
+    async createEdges(source: DiagramNode, sourceTree: Tree, typeToId: Map<string, string>): Promise<Edge[]> {
         //EXT-LANGUAGE-TODO
-        if(this.language === "Java"){
-            return await this.javaUtils.createEdges(source,sourceTree,typeToId)
+        if (this.language === 'Java') {
+            return await this.javaUtils.createEdges(source, sourceTree, typeToId);
         }
 
-        return []
+        return [];
     }
 
     dispose(): void {
@@ -201,14 +188,12 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         };
 
         //EXT-LANGUAGE-TODO
-        if(this.language === "Java"){
-            c = await this.javaUtils.createNode(name,tree)
+        if (this.language === 'Java') {
+            c = await this.javaUtils.createNode(name, tree);
         }
-        
 
         return c;
     }
-
 
     createDiagram(diagram: Diagram): void {
         const operations: BatchOperation[] = [];
@@ -285,11 +270,24 @@ export class CodeToClassDiagramActionHandler implements Disposable {
         function handleEdge(edge: Edge): BatchOperation {
             const tempId: TempCreationId = `temp_${v4()}`;
 
-            const createOperation = CreateEdgeOperation.create({
-                elementTypeId: `CLASS__${edge.type}`,
-                sourceElementId: `temp_${edge.fromId}`,
-                targetElementId: `temp_${edge.toId}`
-            });
+            let createOperation = null;
+            console.log('Handling edge:', edge, ', type:', edge.type);
+
+            // Composition and Aggregation edges need to be ordered reversely
+            if (edge.type === 'Composition' || edge.type === 'Aggregation') {
+                createOperation = CreateEdgeOperation.create({
+                    elementTypeId: `CLASS__${edge.type}`,
+                    sourceElementId: `temp_${edge.toId}`,
+                    targetElementId: `temp_${edge.fromId}`
+                });
+            } else {
+                createOperation = CreateEdgeOperation.create({
+                    elementTypeId: `CLASS__${edge.type}`,
+                    sourceElementId: `temp_${edge.fromId}`,
+                    targetElementId: `temp_${edge.toId}`
+                });
+            }
+
             const updateActions: UpdateElementPropertyAction[] = [];
 
             if (edge.label) {
@@ -323,9 +321,6 @@ export class CodeToClassDiagramActionHandler implements Disposable {
             operations.push(handleEdge(edge));
         }
 
-       
         this.actionDispatcher.dispatch(BatchCreateOperation.create(operations));
     }
-
-    
 }

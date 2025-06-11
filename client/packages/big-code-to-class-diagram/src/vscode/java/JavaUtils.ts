@@ -28,7 +28,6 @@ type ParsedProperty = {
     resolvedTypes?: string[];
 };
 
-
 const isCollectionType = (typeNode: any): boolean => {
     const text = typeNode.text;
     return text.includes('List') || text.includes('Set') || text.includes('[]');
@@ -41,9 +40,8 @@ const createMultiplicity = (isCollectionType: boolean): Multiplicity => ({
 });
 
 export class JavaUtils {
-    
     private parser: treeSitter.Parser | null = null;
-    language: string = "Java";
+    language: string = 'Java';
     private fileMap = new Map<string, Tree>();
     private diagram: Diagram = { edges: [], nodes: [] };
 
@@ -66,7 +64,7 @@ export class JavaUtils {
         for (const entry of entries) {
             const fullPath = path.join(dirPath, entry.name);
             if (entry.isDirectory()) {
-                count += await this.countNumberOfJavaFiles(fullPath); 
+                count += await this.countNumberOfJavaFiles(fullPath);
             } else if (entry.isFile() && entry.name.endsWith('.java')) {
                 count++;
             }
@@ -124,7 +122,7 @@ export class JavaUtils {
         return 'Class';
     }
 
-     async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree>> {
+    async readJavaFilesAsMap(dirPath: string | null): Promise<Map<string, Tree>> {
         this.diagram.edges = [];
 
         const readDirRecursive = async (currentPath: string | null) => {
@@ -360,12 +358,12 @@ export class JavaUtils {
                 const isPassedAsMethodParameter = this.isMethodParameter(sourceTree, property.resolvedTypes ?? []);
 
                 // TODO check if these assumptions hold
-                // Check for Composition: If the object is either a private or protected field and is instantiated in the class (not part of a method parameter)
+                // Check for Composition
                 if (isPrivateOrProtected && !isPassedAsMethodParameter) {
                     relationshipType = 'Composition';
                 }
-                // Check for Aggregation: If a field is injected (e.g., via constructor or setter) and is not instantiated in the class
-                else if (isPrivateOrProtected) {
+                // Check for Aggregation
+                else if (isPrivateOrProtected && isPassedAsMethodParameter) {
                     relationshipType = 'Aggregation';
                 }
 
