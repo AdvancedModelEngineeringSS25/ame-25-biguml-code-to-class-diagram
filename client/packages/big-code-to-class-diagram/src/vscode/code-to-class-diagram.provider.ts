@@ -45,9 +45,8 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
             this.webviewConnector.onReady(() => {
                 //this.requestFolder();
                 //this.requestDiagram();
-                this.requestLanguage();
+                // this.requestLanguage();
                 // TODO: Example code to create a diagram
-                
             }),
             this.connectionManager.onDidActiveClientChange(() => {
                 console.warn('onDidActiveClientChange');
@@ -85,8 +84,6 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
     }
 
     protected requestLanguage(): void {
-        this.actionDispatcher.dispatch(RequestChangeLanguageAction.create({language: "Java"}));
+        this.actionDispatcher.dispatch(RequestChangeLanguageAction.create({ language: 'Java' }));
     }
-
-    
 }
