@@ -53,7 +53,7 @@ export function CodeToClassDiagram(): ReactElement {
             {folder !== null && (
                 <div>
                     <span><strong>Selected Folder:</strong> {folder}</span>
-                    <span><strong>Files used for file generation:</strong> {fileCount}</span>
+                    <span><strong>Files used for diagram generation:</strong> {fileCount}</span>
                 </div>
             )}
             {folder !== null && (
