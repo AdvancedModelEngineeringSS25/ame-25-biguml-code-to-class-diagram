@@ -8,7 +8,6 @@
  **********************************************************************************/
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import type { Tree } from 'web-tree-sitter';
 import * as treeSitter from 'web-tree-sitter';
 import {
@@ -48,9 +47,23 @@ export class JavaUtils {
     async doInit(uri: any): Promise<void> {
         await treeSitter.Parser.init();
 
-        const javaUri = vscode.Uri.joinPath(uri, 'lib', 'tree-sitter-java.wasm');
+        let javaWasmPath: string;
+        // Try to use VSCode's joinPath if available, otherwise fallback to path.join
+        if (uri && uri.fsPath) {
+            try {
+                // Dynamically import vscode if available
+                // @ts-ignore
+                const vscode = await import('vscode');
+                javaWasmPath = vscode.Uri.joinPath(uri, 'wasm', 'tree-sitter-java.wasm').fsPath;
+            } catch (e) {
+                // Fallback for Node.js: use path.join
+                javaWasmPath = path.join(uri.fsPath, 'wasm', 'tree-sitter-java.wasm');
+            }
+        } else {
+            throw new Error('No extension URI provided for WASM path');
+        }
 
-        const java = await treeSitter.Language.load(javaUri.fsPath);
+        const java = await treeSitter.Language.load(javaWasmPath);
         const parser = new treeSitter.Parser();
         parser.setLanguage(java);
         this.parser = parser;

@@ -1,18 +1,36 @@
 package mock.java;
 
-public class Room implements IControllable, ISecondInterface {
-    private String name;
-    private Thermostat thermostat = new Thermostat(); // Composition
+import java.util.ArrayList;
+import java.util.List;
 
-    @Override
-    public void turnOn() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'turnOn'");
+public class Room {
+    private String name;
+    private List<Light> lights;
+    private List<TemperatureSensor> sensors;
+
+    public Room(String name) {
+        this.name = name;
+        this.lights = new ArrayList<>();
+        this.sensors = new ArrayList<>();
     }
 
-    @Override
-    public void turnOff() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'turnOff'");
+    public void addLight(Light light) {
+        lights.add(light);
+    }
+
+    public void addSensor(TemperatureSensor sensor) {
+        sensors.add(sensor);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<Light> getLights() {
+        return lights;
+    }
+
+    public List<TemperatureSensor> getSensors() {
+        return sensors;
     }
 }
