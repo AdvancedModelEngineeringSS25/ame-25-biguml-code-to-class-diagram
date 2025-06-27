@@ -52,7 +52,6 @@ export class JavaUtils {
         if (uri && uri.fsPath) {
             try {
                 // Dynamically import vscode if available
-                // @ts-ignore
                 const vscode = await import('vscode');
                 javaWasmPath = vscode.Uri.joinPath(uri, 'wasm', 'tree-sitter-java.wasm').fsPath;
             } catch (e) {
