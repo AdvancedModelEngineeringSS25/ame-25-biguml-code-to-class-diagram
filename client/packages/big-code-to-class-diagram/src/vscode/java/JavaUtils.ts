@@ -225,21 +225,23 @@ export class JavaUtils {
                 else if (modifierText?.includes('protected')) accessModifier = '#';
             }
 
-            const resolvedTypes: string[] = [];
+            const resolvedTypes = this.extractResolvedTypes(nodeType);
 
-            if (nodeType) {
-                const typeArgsNodes = nodeType.descendantsOfType('type_arguments');
-                if (typeArgsNodes.length > 0) {
-                    const typeIdentifiers = typeArgsNodes[0]?.descendantsOfType('type_identifier') ?? [];
-                    for (const id of typeIdentifiers) {
-                        if (id) {
-                            resolvedTypes.push(id.text);
-                        }
-                    }
-                } else {
-                    resolvedTypes.push(nodeType.text);
-                }
-            }
+            // const resolvedTypes: string[] = [];
+
+            // if (nodeType) {
+            //     const typeArgsNodes = nodeType.descendantsOfType('type_arguments');
+            //     if (typeArgsNodes.length > 0) {
+            //         const typeIdentifiers = typeArgsNodes[0]?.descendantsOfType('type_identifier') ?? [];
+            //         for (const id of typeIdentifiers) {
+            //             if (id) {
+            //                 resolvedTypes.push(id.text);
+            //             }
+            //         }
+            //     } else {
+            //         resolvedTypes.push(nodeType.text);
+            //     }
+            // }
 
             if (nodeName && nodeType) {
                 const isCollection = isCollectionType(nodeType);
@@ -432,21 +434,39 @@ export class JavaUtils {
         const isPassesAsParameterInMethod = tree.rootNode.descendantsOfType('method_declaration').some(method => {
             const params = method?.childForFieldName('parameters')?.namedChildren ?? [];
             return params.some(param => {
-                const paramType = param?.childForFieldName('type')?.text;
-                return resolvedTypes.includes(paramType ? paramType : '');
+                const paramTypeNode = param?.childForFieldName('type');
+                const resolvedParamTypes = this.extractResolvedTypes(paramTypeNode);
+                return resolvedParamTypes.some(type => resolvedTypes.includes(type));
             });
         });
 
         const isPassesAsParameterInConstructor = tree.rootNode.descendantsOfType('constructor_declaration').some(method => {
             const params = method?.childForFieldName('parameters')?.namedChildren ?? [];
             return params.some(param => {
-                const paramType = param?.childForFieldName('type')?.text;
-                // return resolvedTypes.includes(paramType ? paramType : '');
-
-                return resolvedTypes.some(t => paramType === t || paramType?.endsWith('.' + t));
+                const paramTypeNode = param?.childForFieldName('type');
+                const resolvedParamTypes = this.extractResolvedTypes(paramTypeNode);
+                return resolvedParamTypes.some(type => resolvedTypes.includes(type));
             });
         });
 
         return isPassesAsParameterInMethod || isPassesAsParameterInConstructor;
+    }
+
+    private extractResolvedTypes(typeNode: any): string[] {
+        const resolvedTypes: string[] = [];
+
+        if (!typeNode) return resolvedTypes;
+
+        const typeArgsNodes = typeNode.descendantsOfType('type_arguments');
+        if (typeArgsNodes.length > 0) {
+            const typeIdentifiers = typeArgsNodes[0]?.descendantsOfType('type_identifier') ?? [];
+            for (const id of typeIdentifiers) {
+                if (id) resolvedTypes.push(id.text);
+            }
+        } else {
+            resolvedTypes.push(typeNode.text);
+        }
+
+        return resolvedTypes;
     }
 }

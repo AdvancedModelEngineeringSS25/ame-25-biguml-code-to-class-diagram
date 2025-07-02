@@ -18,8 +18,8 @@ public class Room {
         lights.add(light);
     }
 
-    public void addSensor(TemperatureSensor sensor) {
-        sensors.add(sensor);
+    public void addSensors(List<TemperatureSensor> sensors) {
+        sensors.addAll(sensors);
     }
 
     public String getName() {
