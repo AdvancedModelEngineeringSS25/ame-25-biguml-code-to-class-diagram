@@ -237,11 +237,7 @@ export class JavaUtils {
                         }
                     }
                 } else {
-                    // Fallback to simple type
-                    const fallback = nodeType.descendantsOfType('type_identifier')[0];
-                    if (fallback) {
-                        resolvedTypes.push(fallback.text);
-                    }
+                    resolvedTypes.push(nodeType.text);
                 }
             }
 
@@ -367,7 +363,7 @@ export class JavaUtils {
                 let relationshipType: 'Association' | 'Aggregation' | 'Composition' = 'Association';
 
                 const isPrivateOrProtected = property.accessModifier === '-' || property.accessModifier === '#';
-                const isPassedAsMethodParameter = this.isMethodParameter(sourceTree, property.resolvedTypes ?? []);
+                const isPassedAsMethodParameter = this.isPassedAsParameter(sourceTree, property.resolvedTypes ?? []);
 
                 // TODO check if these assumptions hold
                 // Check for Composition
@@ -379,15 +375,15 @@ export class JavaUtils {
                     relationshipType = 'Aggregation';
                 }
 
-                if (property.isCollection)
-                    edges.push({
-                        type: relationshipType,
-                        fromId: source.id,
-                        toId: targetId,
-                        label: property.name,
-                        sourceMultiplicity: sourceMultiplicity,
-                        targetMultiplicity: targetMultiplicity
-                    });
+                // if (property.isCollection)
+                edges.push({
+                    type: relationshipType,
+                    fromId: source.id,
+                    toId: targetId,
+                    label: property.name,
+                    sourceMultiplicity: sourceMultiplicity,
+                    targetMultiplicity: targetMultiplicity
+                });
             }
         }
 
@@ -432,13 +428,25 @@ export class JavaUtils {
         return edges;
     }
 
-    private isMethodParameter(tree: Tree, resolvedTypes: string[]): boolean {
-        return tree.rootNode.descendantsOfType('method_declaration').some(method => {
+    private isPassedAsParameter(tree: Tree, resolvedTypes: string[]): boolean {
+        const isPassesAsParameterInMethod = tree.rootNode.descendantsOfType('method_declaration').some(method => {
             const params = method?.childForFieldName('parameters')?.namedChildren ?? [];
             return params.some(param => {
                 const paramType = param?.childForFieldName('type')?.text;
                 return resolvedTypes.includes(paramType ? paramType : '');
             });
         });
+
+        const isPassesAsParameterInConstructor = tree.rootNode.descendantsOfType('constructor_declaration').some(method => {
+            const params = method?.childForFieldName('parameters')?.namedChildren ?? [];
+            return params.some(param => {
+                const paramType = param?.childForFieldName('type')?.text;
+                // return resolvedTypes.includes(paramType ? paramType : '');
+
+                return resolvedTypes.some(t => paramType === t || paramType?.endsWith('.' + t));
+            });
+        });
+
+        return isPassesAsParameterInMethod || isPassesAsParameterInConstructor;
     }
 }
