@@ -65,9 +65,11 @@ describe('Code-to-Class Diagram Unit Tests', () => {
 
   // Inheritance
   it('should detect inheritance', async () => {
-    const diagram = await generateDiagram(['Device.java', 'Light.java']);
-    const edge = findEdge(diagram, 'Light', 'Device', 'Generalization');
-    expect(edge).toBeDefined();
+    const diagram = await generateDiagram(['Device.java', 'Light.java', 'TemperatureSensor.java']);
+    const edge1 = findEdge(diagram, 'Light', 'Device', 'Generalization');
+    const edge2 = findEdge(diagram, 'TemperatureSensor', 'Device', 'Generalization');
+    expect(edge1).toBeDefined();
+    expect(edge2).toBeDefined();
   });
 
   // Realization
@@ -95,9 +97,15 @@ describe('Code-to-Class Diagram Unit Tests', () => {
 
   // Aggregation of collection
   it('should detect aggregation of collection', async () => {
-    const diagram = await generateDiagram(['SmartHomeController.java', 'Device.java']);
-    const edge = findEdge(diagram, 'SmartHomeController', 'Device', 'Aggregation');
-    expect(edge).toBeDefined();
+    const diagram = await generateDiagram(['SmartHomeController.java', 'Device.java', 'Light.java', 'TemperatureSensor.java', 'Room.java']);
+    const edge1 = findEdge(diagram, 'SmartHomeController', 'Device', 'Aggregation');
+    const edge2 = findEdge(diagram, 'Room', 'Light', 'Aggregation');
+    const edge3 = findEdge(diagram, 'Room', 'TemperatureSensor', 'Aggregation');
+    const edge4 = findEdge(diagram, 'SmartHomeController', 'Room', 'Aggregation');
+    expect(edge1).toBeDefined();
+    expect(edge2).toBeDefined();
+    expect(edge3).toBeDefined();
+    expect(edge4).toBeDefined();
   });
 
   // Composition of non-collection
