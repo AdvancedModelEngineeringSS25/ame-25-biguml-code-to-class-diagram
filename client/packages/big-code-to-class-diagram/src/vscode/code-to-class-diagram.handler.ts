@@ -115,11 +115,10 @@ export class CodeToClassDiagramActionHandler implements Disposable {
 
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<GenerateDiagramRequestAction>(GenerateDiagramRequestAction.KIND, async () => {
-                // Create Nodes
                 this.diagram = { edges: [], nodes: [] };
                 this.fileMap = await this.readClassesAsMap(this.path);
 
-                //createNodes
+                // Create Nodes
                 const nodes = await Promise.all(
                     Array.from(this.fileMap.entries()).map(async ([key, value]) => {
                         return this.createNode(key, value);

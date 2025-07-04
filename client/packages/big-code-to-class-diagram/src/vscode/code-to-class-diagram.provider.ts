@@ -42,16 +42,9 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
             this.actionCache.onDidChange(message => {
                 this.webviewConnector.dispatch(message);
             }),
-            this.webviewConnector.onReady(() => {
-                //this.requestFolder();
-                //this.requestDiagram();
-                // this.requestLanguage();
-                // TODO: Example code to create a diagram
-            }),
+            this.webviewConnector.onReady(() => {}),
             this.connectionManager.onDidActiveClientChange(() => {
                 console.warn('onDidActiveClientChange');
-                // this.requestFolder();
-                // this.requestDiagram();
             }),
             this.connectionManager.onNoActiveClient(() => {
                 console.warn('onNoActiveClient');
@@ -69,8 +62,6 @@ export class CodeToClassDiagramProvider extends BIGReactWebview {
             }),
             this.modelState.onDidChangeModelState(() => {
                 console.warn('onDidChangeModelState');
-                // this.requestFolder();
-                // this.requestDiagram();
             })
         );
     }

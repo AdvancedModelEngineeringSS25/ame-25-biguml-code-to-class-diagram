@@ -32,7 +32,6 @@ const isCollectionType = (typeNode: any): boolean => {
     return text.includes('List') || text.includes('Set') || text.includes('[]');
 };
 
-// TODO multiplicities not needed for realization and generalization
 const createMultiplicity = (isCollectionType: boolean): Multiplicity => ({
     lower: isCollectionType ? 0 : 1,
     upper: isCollectionType ? '*' : 1
@@ -90,7 +89,7 @@ export class JavaUtils {
             name: name,
             id: await this.createNodeId(name, tree),
             type: await this.getNodeType(tree),
-            properties: await this.getProperties(tree), // TODO map enum constants as properties
+            properties: await this.getProperties(tree),
             operations: await this.getMethods(tree),
             enumerationLiterals: await this.getEnumLiterals(tree),
             comment: await this.getNodeComment(tree)
@@ -227,22 +226,6 @@ export class JavaUtils {
 
             const resolvedTypes = this.extractResolvedTypes(nodeType);
 
-            // const resolvedTypes: string[] = [];
-
-            // if (nodeType) {
-            //     const typeArgsNodes = nodeType.descendantsOfType('type_arguments');
-            //     if (typeArgsNodes.length > 0) {
-            //         const typeIdentifiers = typeArgsNodes[0]?.descendantsOfType('type_identifier') ?? [];
-            //         for (const id of typeIdentifiers) {
-            //             if (id) {
-            //                 resolvedTypes.push(id.text);
-            //             }
-            //         }
-            //     } else {
-            //         resolvedTypes.push(nodeType.text);
-            //     }
-            // }
-
             if (nodeName && nodeType) {
                 const isCollection = isCollectionType(nodeType);
 
@@ -325,7 +308,6 @@ export class JavaUtils {
     }
 
     async getPackageName(tree: Tree | null): Promise<string> {
-        // TODO error handling?
         if (!tree) return crypto.randomUUID.toString();
 
         const packageNode = tree.rootNode.descendantsOfType('package_declaration')[0];
@@ -338,7 +320,6 @@ export class JavaUtils {
     }
 
     async createEdges(source: DiagramNode, sourceTree: Tree, typeToId: Map<string, string>): Promise<Edge[]> {
-        // TODO extend to other edge types
         console.log('Creating edges');
 
         const edges: Edge[] = [];
@@ -346,7 +327,6 @@ export class JavaUtils {
         const parsedProperties = await this.parseProperties(sourceTree);
         console.log('Parsed properties:', parsedProperties);
 
-        // for (const property of parsedProperties) {
         for (const property of parsedProperties) {
             console.log('Processing property: ', property);
 
@@ -367,7 +347,6 @@ export class JavaUtils {
                 const isPrivateOrProtected = property.accessModifier === '-' || property.accessModifier === '#';
                 const isPassedAsMethodParameter = this.isPassedAsParameter(sourceTree, property.resolvedTypes ?? []);
 
-                // TODO check if these assumptions hold
                 // Check for Composition
                 if (isPrivateOrProtected && !isPassedAsMethodParameter) {
                     relationshipType = 'Composition';
@@ -377,7 +356,6 @@ export class JavaUtils {
                     relationshipType = 'Aggregation';
                 }
 
-                // if (property.isCollection)
                 edges.push({
                     type: relationshipType,
                     fromId: source.id,
